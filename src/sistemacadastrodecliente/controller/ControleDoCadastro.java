@@ -106,6 +106,8 @@ public class ControleDoCadastro {
                 JOptionPane.showMessageDialog(tela, "CPF inválido!");
                 return false;
             }
+            
+            
 
             // 3️⃣ Salvamento
             if (clienteId == -1) { // NOVO

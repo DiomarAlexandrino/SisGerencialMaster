@@ -13,6 +13,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.MaskFormatter;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.text.ParseException;
 import java.util.List;
 import sistemacadastrodecliente.util.CampoDataComCalendario;
@@ -325,7 +327,32 @@ public final class TelaDoCadastro extends JFrame {
         cbEstado.addActionListener(e -> validador.validarCampo(cbEstado));
 
         // No método inicializarOuvintes()
-        txtCidade.getDocument().addDocumentListener(SimpleDocumentListener.of(() -> validador.revalidarCEP()));
+        txtCidade.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (!txtCidade.isEnabled()) {
+                    return;
+                }
+
+                EstadoTela estado = controle.getEstadoAtual();
+                if (estado != EstadoTela.ADICIONANDO && estado != EstadoTela.EDITANDO) {
+                    return;
+                }
+
+                // 🔹 valida cidade
+                validador.validarCampo(txtCidade);
+
+                // 🔹 valida estado
+                validador.validarCampo(cbEstado);
+
+                // 🔹 valida CEP
+                validador.validarCampo(txtCEP);
+
+                // 🔹 força rechecagem de habilitação do botão Salvar
+                controle.atualizarFormularioValido(rootPaneCheckingEnabled);
+            }
+        });
+
         cbEstado.addActionListener(e -> validador.revalidarCEP());
 
     }
@@ -529,6 +556,10 @@ public final class TelaDoCadastro extends JFrame {
     }
 
     private Cliente RegistrarClientedoFormulario() {
+
+        // FORÇA validação da cidade
+        validador.validarCampo(txtCidade);
+
         if (!validador.formularioValido()) {
             JOptionPane.showMessageDialog(this, "Preencha corretamente os campos destacados em vermelho.");
             return null;

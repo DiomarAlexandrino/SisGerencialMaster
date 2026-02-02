@@ -14,26 +14,22 @@ import javax.swing.event.DocumentListener;
 
 @FunctionalInterface
 public interface SimpleDocumentListener extends DocumentListener {
-
-    void update();
-
-    @Override
-    default void insertUpdate(DocumentEvent e) {
-        update();
-    }
+    void update(DocumentEvent e);
 
     @Override
-    default void removeUpdate(DocumentEvent e) {
-        update();
-    }
+    default void insertUpdate(DocumentEvent e) { update(e); }
 
     @Override
-    default void changedUpdate(DocumentEvent e) {
-        update();
-    }
+    default void removeUpdate(DocumentEvent e) { update(e); }
 
-    // ✅ Método utilitário para criar listener a partir de lambda
+    @Override
+    default void changedUpdate(DocumentEvent e) { update(e); }
+
     static SimpleDocumentListener of(Runnable r) {
-        return r::run;
+        return new SimpleDocumentListener() {
+            @Override
+            public void update(DocumentEvent e) { r.run(); }
+        };
     }
 }
+
