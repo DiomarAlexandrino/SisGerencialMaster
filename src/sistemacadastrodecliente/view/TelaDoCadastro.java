@@ -67,9 +67,11 @@ public final class TelaDoCadastro extends JFrame {
         inicializarOuvintes();
         carregarTabela();
         inicializarValidacoes();
-        aplicarTemaSelecionado();
+
         limparCampos();
         setVisible(true);
+
+        aplicarTemaSelecionado();
 
     }
 
@@ -322,6 +324,10 @@ public final class TelaDoCadastro extends JFrame {
         // =========================
         cbEstado.addActionListener(e -> validador.validarCampo(cbEstado));
 
+        // No método inicializarOuvintes()
+        txtCidade.getDocument().addDocumentListener(SimpleDocumentListener.of(() -> validador.revalidarCEP()));
+        cbEstado.addActionListener(e -> validador.revalidarCEP());
+
     }
 
     private void aplicarTemaSelecionado() {
@@ -335,10 +341,15 @@ public final class TelaDoCadastro extends JFrame {
         if (campoDataNascimento != null) {
             campoDataNascimento.aplicarTema(temaSelecionado);
         }
+
+        Tema.aplicarTemaCombo(cbEstado, temaSelecionado);
+        cbEstado.repaint();
     }
 
     private void inicializarValidacoes() {
-        validador = new ValidadorFormulario();
+        validador = new ValidadorFormulario(this);
+
+        validador.setControle(this.controle);
 
         // Campos obrigatórios
         validador.registrarCampo(txtNome, TipoValidacao.TEXTO_OBRIGATORIO);
@@ -346,9 +357,9 @@ public final class TelaDoCadastro extends JFrame {
         validador.registrarCampo(txtEndereco, TipoValidacao.TEXTO_OBRIGATORIO);
         validador.registrarCampo(txtEndereco, TipoValidacao.CAMPO_MAX_80);
         validador.registrarCampo(txtNumero, TipoValidacao.TEXTO_OBRIGATORIO);
-        validador.registrarCampo(txtNumero, TipoValidacao.CAMPO_MAX_80);
+        validador.registrarCampo(txtNumero, TipoValidacao.CAMPO_MAX_10);
         validador.registrarCampo(txtCidade, TipoValidacao.TEXTO_OBRIGATORIO);
-        validador.registrarCampo(txtCidade, TipoValidacao.CAMPO_MAX_80);
+        validador.registrarCampo(txtCidade, TipoValidacao.CIDADE_OBRIGATORIA);
 
         // Email
         validador.registrarCampo(txtEmail, TipoValidacao.EMAIL);
@@ -513,6 +524,8 @@ public final class TelaDoCadastro extends JFrame {
 
         tabelaClientes.clearSelection();
 
+        aplicarTemaSelecionado();
+
     }
 
     private Cliente RegistrarClientedoFormulario() {
@@ -642,17 +655,25 @@ public final class TelaDoCadastro extends JFrame {
         clienteId = -1; // Nenhum cliente selecionado
         campoDataNascimento.setEnabledCampo(true); // habilita o campo de data
         tabelaClientes.clearSelection(); // desmarca qualquer seleção na tabela
+
+        aplicarTemaSelecionado();
+
     }
 
     private void acaoCancelar() {
-        // Limpa os campos
         limparCampos();
 
-        // Desativa campos que não devem ser editados
         campoDataNascimento.setEnabledCampo(false);
-
-        // Retorna o estado da tela para "navegando"
         controle.setEstado(EstadoTela.NAVEGANDO);
+
+        SwingUtilities.invokeLater(() -> {
+            aplicarTemaSelecionado();
+
+            // 🔥 FORÇA O COMBO APÓS ENABLE/DISABLE
+            Tema.aplicarTemaCombo(cbEstado, temaSelecionado);
+            cbEstado.setEnabled(true); // garante estado visual correto
+            cbEstado.repaint();
+        });
     }
 
     private void salvarCliente() {

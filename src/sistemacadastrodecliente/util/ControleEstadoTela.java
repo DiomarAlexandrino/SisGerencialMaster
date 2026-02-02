@@ -6,17 +6,18 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
+import sistemacadastrodecliente.view.temas.Tema;
+import sistemacadastrodecliente.view.temas.TemaEnum;
 
 public class ControleEstadoTela {
 
     private JTable tabela;
     private JPanel painelFormulario;
     private JButton btnNovo, btnEditar, btnExcluir, btnSalvar, btnCancelar;
-
+   
     private EstadoTela estadoAtual = EstadoTela.NAVEGANDO;
     private final CampoDataComCalendario campoDataNascimento;
-
-  
+    private boolean formularioValido = false;
 
     public ControleEstadoTela(JTable tabela, JPanel painelFormulario, JButton btnNovo, JButton btnEditar, JButton btnExcluir, JButton btnSalvar, JButton btnCancelar, CampoDataComCalendario campoDataNascimento) {
         this.tabela = tabela;
@@ -26,10 +27,12 @@ public class ControleEstadoTela {
         this.btnExcluir = btnExcluir;
         this.btnSalvar = btnSalvar;
         this.btnCancelar = btnCancelar;
-        
+
         this.campoDataNascimento = campoDataNascimento; // agora é o campo real da tela
 
         atualizarComponentes();
+      
+        
     }
 
     public ControleEstadoTela() {
@@ -41,40 +44,39 @@ public class ControleEstadoTela {
         atualizarComponentes();
     }
 
-private void atualizarComponentes() {
-    switch (estadoAtual) {
-        case NAVEGANDO -> {
-            tabela.setEnabled(true);
-            painelFormulario.setEnabled(false);
-            habilitarComponentesFormulario(false);
+    private void atualizarComponentes() {
+        switch (estadoAtual) {
+            case NAVEGANDO -> {
+                tabela.setEnabled(true);
+                painelFormulario.setEnabled(false);
+                habilitarComponentesFormulario(false);
 
-            // DESABILITA o campo de data real
-            campoDataNascimento.setEnabledCampo(false);
+                // DESABILITA o campo de data real
+                campoDataNascimento.setEnabledCampo(false);
 
-            btnNovo.setEnabled(true);
-            btnEditar.setEnabled(tabela.getSelectedRow() != -1);
-            btnExcluir.setEnabled(tabela.getSelectedRow() != -1);
-            btnSalvar.setEnabled(false);
-            btnCancelar.setEnabled(false);
-        }
-        case ADICIONANDO, EDITANDO -> {
-            tabela.setEnabled(false);
-            painelFormulario.setEnabled(true);
-            habilitarComponentesFormulario(true);
+                btnNovo.setEnabled(true);
+                btnEditar.setEnabled(tabela.getSelectedRow() != -1);
+                btnExcluir.setEnabled(tabela.getSelectedRow() != -1);
+                btnSalvar.setEnabled(false);
+                btnCancelar.setEnabled(false);
+           
+            }
+            case ADICIONANDO, EDITANDO -> {
+                tabela.setEnabled(false);
+                painelFormulario.setEnabled(true);
+                habilitarComponentesFormulario(true);
 
-            // HABILITA o campo de data real
-            campoDataNascimento.setEnabledCampo(true);
+                campoDataNascimento.setEnabledCampo(true);
 
-            btnNovo.setEnabled(false);
-            btnEditar.setEnabled(false);
-            btnExcluir.setEnabled(false);
-            btnSalvar.setEnabled(true);
-            btnCancelar.setEnabled(true);
+                btnNovo.setEnabled(false);
+                btnEditar.setEnabled(false);
+                btnExcluir.setEnabled(false);
+                // Agora só habilita salvar se o formulário estiver válido
+                btnSalvar.setEnabled(formularioValido);
+                btnCancelar.setEnabled(true);
+            }
         }
     }
-}
-
-
 
     private void habilitarComponentesFormulario(boolean habilitar) {
         // Itera sobre todos os componentes do painel do formulário
@@ -86,11 +88,17 @@ private void atualizarComponentes() {
 
     // Método chamado pelo ValidadorFormulario para habilitar ou desabilitar o botão salvar
     public void atualizarFormularioValido(boolean valido) {
-        if (btnSalvar != null) {
-            btnSalvar.setEnabled(valido);
+        this.formularioValido = valido; // atualiza o estado interno
+
+        // Só permite salvar se estivermos adicionando ou editando
+        if (estadoAtual == EstadoTela.ADICIONANDO || estadoAtual == EstadoTela.EDITANDO) {
+            if (btnSalvar != null) {
+                btnSalvar.setEnabled(formularioValido);
+            }
         }
     }
 
+// Getter do estado atual da tela
     public EstadoTela getEstadoAtual() {
         return estadoAtual;
     }

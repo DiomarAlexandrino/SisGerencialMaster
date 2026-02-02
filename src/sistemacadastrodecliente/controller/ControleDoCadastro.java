@@ -87,52 +87,52 @@ public class ControleDoCadastro {
     }
 
     // ================== SALVAR CLIENTE ==================
-  public boolean salvarCliente(TelaDoCadastro tela, Cliente cliente, int clienteId) {
+    public boolean salvarCliente(TelaDoCadastro tela, Cliente cliente, int clienteId) {
 
-    try {
-        // 1️⃣ Validação do celular
-        String telefone = cliente.getTelefone();
-        if (!validarCelular(telefone)) {
-            JOptionPane.showMessageDialog(tela, 
-                "Número de celular inválido! Informe um número com DDD e começando com 9.");
-            return false;
-        }
-        // Formata antes de salvar
-        cliente.setTelefone(formatarCelular(telefone));
+        try {
+            // 1️⃣ Validação do celular
+            String telefone = cliente.getTelefone();
+            if (!validarCelular(telefone)) {
+                JOptionPane.showMessageDialog(tela,
+                        "Número de celular inválido! Informe um número com DDD e começando com 9.");
+                return false;
+            }
+            // Formata antes de salvar
+            cliente.setTelefone(formatarCelular(telefone));
 
-        // 2️⃣ Validação do CPF
-        String cpf = cliente.getCpf();
-        if (!ValidadorCPF.validar(cpf)) {
-            JOptionPane.showMessageDialog(tela, "CPF inválido!");
-            return false;
-        }
-
-        // 3️⃣ Salvamento
-        if (clienteId == -1) { // NOVO
-            if (clienteDAO.existeCpf(cpf)) {
-                JOptionPane.showMessageDialog(tela, "CPF já cadastrado!");
+            // 2️⃣ Validação do CPF
+            String cpf = cliente.getCpf();
+            if (!ValidadorCPF.validar(cpf)) {
+                JOptionPane.showMessageDialog(tela, "CPF inválido!");
                 return false;
             }
 
-            clienteDAO.cadastrar(cliente);
-            return true;
-        } else { // EDIÇÃO
-            cliente.setId(clienteId);
-            Cliente outro = clienteDAO.buscarPorCpf(cpf);
-            if (outro != null && outro.getId() != clienteId) {
-                JOptionPane.showMessageDialog(tela, "CPF já cadastrado em outro cliente!");
-                return false;
-            }
-            clienteDAO.atualizar(cliente);
-            return true;
-        }
+            // 3️⃣ Salvamento
+            if (clienteId == -1) { // NOVO
+                if (clienteDAO.existeCpf(cpf)) {
+                    JOptionPane.showMessageDialog(tela, "CPF já cadastrado!");
+                    return false;
+                }
 
-    } catch (Exception ex) {
-        JOptionPane.showMessageDialog(tela, "Erro ao salvar cliente: " + ex.getMessage());
-        ex.printStackTrace();
-        return false;
+                clienteDAO.cadastrar(cliente);
+                return true;
+            } else { // EDIÇÃO
+                cliente.setId(clienteId);
+                Cliente outro = clienteDAO.buscarPorCpf(cpf);
+                if (outro != null && outro.getId() != clienteId) {
+                    JOptionPane.showMessageDialog(tela, "CPF já cadastrado em outro cliente!");
+                    return false;
+                }
+                clienteDAO.atualizar(cliente);
+                return true;
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(tela, "Erro ao salvar cliente: " + ex.getMessage());
+            ex.printStackTrace();
+            return false;
+        }
     }
-}
 
     // ================== EDITAR CLIENTE ==================
     public boolean editarCliente(TelaDoCadastro tela,
@@ -218,11 +218,17 @@ public class ControleDoCadastro {
 
     // ================== OBTER CLIENTE DOS CAMPOS ==================
     public Cliente getClienteFromFields(TelaDoCadastro tela) {
+        // Desativa o botão Salvar imediatamente
+        tela.getBtnSalvar().setEnabled(false);
+
         // Validações
         if (!tela.getValidador().formularioValido()) {
-            JOptionPane.showMessageDialog(tela, "Preencha corretamente os campos destacados em vermelho.");
+            JOptionPane.showMessageDialog(tela, "Preencha corretamente os campos .");
             return null;
         }
+
+        // Se passou na validação, reativa o botão
+        tela.getBtnSalvar().setEnabled(true);
 
         Cliente cliente = new Cliente();
 
@@ -336,5 +342,7 @@ public class ControleDoCadastro {
         String parte2 = numeros.substring(7);
         return String.format("(%s) %s-%s", ddd, parte1, parte2);
     }
+
+
 
 }

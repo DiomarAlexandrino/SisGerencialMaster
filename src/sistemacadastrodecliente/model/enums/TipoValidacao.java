@@ -17,5 +17,7 @@ public enum TipoValidacao {
     COMBO_OBRIGATORIO,
     DATA_OBRIGATORIA,
     TELEFONE,
-    CAMPO_MAX_80
+    CAMPO_MAX_80,
+    CAMPO_MAX_10,
+    CIDADE_OBRIGATORIA
 }

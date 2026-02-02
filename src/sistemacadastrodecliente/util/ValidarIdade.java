@@ -11,22 +11,27 @@ import java.time.LocalDate;
  * @author diomar.alexandrino
  */
 public class ValidarIdade {
-    public static boolean validarIdadeMinima(LocalDate dataNascimento) {
-    if (dataNascimento == null) {
-        return false;
+    public static boolean validarIdade(LocalDate dataNascimento) {
+        if (dataNascimento == null) {
+            return false; // Se não informar data, inválido
+        }
+
+        LocalDate hoje = LocalDate.now();
+        int idade = hoje.getYear() - dataNascimento.getYear();
+
+        // Ajusta idade se ainda não fez aniversário este ano
+        if (hoje.getMonthValue() < dataNascimento.getMonthValue()
+                || (hoje.getMonthValue() == dataNascimento.getMonthValue()
+                && hoje.getDayOfMonth() < dataNascimento.getDayOfMonth())) {
+            idade--;
+        }
+
+        // Calcula limites de ano válidos
+        LocalDate dataMinima = hoje.minusYears(150); // idade máxima 150
+        LocalDate dataMaxima = hoje.minusYears(12);  // idade mínima 12
+
+        // Verifica se a data está dentro do intervalo permitido
+        return !dataNascimento.isBefore(dataMinima) && !dataNascimento.isAfter(dataMaxima);
     }
-
-    LocalDate hoje = LocalDate.now();
-    int idade = hoje.getYear() - dataNascimento.getYear();
-
-    // Ajusta se ainda não fez aniversário no ano atual
-    if (hoje.getMonthValue() < dataNascimento.getMonthValue()
-            || (hoje.getMonthValue() == dataNascimento.getMonthValue()
-            && hoje.getDayOfMonth() < dataNascimento.getDayOfMonth())) {
-        idade--;
-    }
-
-    return idade >= 12;
-}
     
 }
