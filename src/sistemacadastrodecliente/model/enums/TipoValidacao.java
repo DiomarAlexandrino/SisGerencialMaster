@@ -9,7 +9,7 @@ package sistemacadastrodecliente.model.enums;
  * @author diomar.alexandrino
  */
 public enum TipoValidacao {
-    TEXTO_OBRIGATORIO,
+    NOME_OBRIGATORIO,
     EMAIL,
     CPF,
     CEP,
@@ -17,7 +17,9 @@ public enum TipoValidacao {
     COMBO_OBRIGATORIO,
     DATA_OBRIGATORIA,
     TELEFONE,
-    CAMPO_MAX_80,
-    CAMPO_MAX_10,
-    CIDADE_OBRIGATORIA
+    ENDERECO_OBRIGATORIO,
+   NUMERO_OBRIGATORIO,
+    CIDADE_OBRIGATORIA,
+    APENAS_LETRAS,
+    ALFA_NUMERICO
 }

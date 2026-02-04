@@ -26,65 +26,68 @@ public class ControleDoCadastro {
     }
 
     // ================== PREENCHER CAMPOS ==================
-    public void preencherCamposParaEdicao(
-            TelaDoCadastro tela,
-            Cliente cliente,
-            CampoDataComCalendario campoDataNascimento) {
+   public void preencherCamposParaEdicao(
+           TelaDoCadastro tela, Cliente cliente) {
 
-        if (cliente == null) {
-            return;
-        }
+    if (cliente == null) {
+        return;
+    }
 
-        tela.setClienteId(cliente.getId());
-        tela.getTxtNome().setText(cliente.getNome() != null ? cliente.getNome() : "");
+    tela.setClienteId(cliente.getId());
+    tela.getTxtNome().setText(cliente.getNome() != null ? cliente.getNome() : "");
 
-        // CPF
-        if (cliente.getCpf() != null) {
-            String cpfFormatado = cliente.getCpf().replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
-            tela.getTxtCPF().setText(cpfFormatado);
-        }
+    // CPF
+    if (cliente.getCpf() != null) {
+        tela.getTxtCPF().setText(formatarCPF(cliente.getCpf()));
+    } else {
+        tela.getTxtCPF().setText("");
+    }
 
-        // Data de nascimento - Date -> LocalDate
-        LocalDate dataNascimento = tela.getCampoDataNascimento().getDate();
-        cliente.setDataNascimento(dataNascimento);
+    // Data de nascimento - Date -> LocalDate
+    LocalDate dataNascimento = tela.getCampoDataNascimento().getDate();
+    cliente.setDataNascimento(dataNascimento);
 
-        tela.getTxtEmail().setText(cliente.getEmail() != null ? cliente.getEmail() : "");
+    tela.getTxtEmail().setText(cliente.getEmail() != null ? cliente.getEmail() : "");
 
-        // Telefone
-        if (cliente.getTelefone() != null && cliente.getTelefone().length() >= 11) {
-            String telFormatado = cliente.getTelefone().replaceAll("(\\d{2})(\\d{5})(\\d{4})", "($1) $2-$3");
-            tela.getTxtTelefone().setText(telFormatado);
-        } else {
-            tela.getTxtTelefone().setText(cliente.getTelefone() != null ? cliente.getTelefone() : "");
-        }
+    // Telefone
+    if (cliente.getTelefone() != null && cliente.getTelefone().length() >= 11) {
+        tela.getTxtTelefone().setText(formatarCelular(cliente.getTelefone()));
+    } else {
+        tela.getTxtTelefone().setText(cliente.getTelefone() != null ? cliente.getTelefone() : "");
+    }
 
-        // CEP
-        if (cliente.getCep() != null && cliente.getCep().length() >= 8) {
-            String cepFormatado = cliente.getCep().replaceAll("(\\d{5})(\\d{3})", "$1-$2");
-            tela.getTxtCEP().setText(cepFormatado);
-        } else {
-            tela.getTxtCEP().setText(cliente.getCep() != null ? cliente.getCep() : "");
-        }
+    // CEP só se não estiver navegando e cidade + UF preenchidos
+    EstadoTela estadoAtual = tela.getEstadoAtual();
+    if (!EstadoTela.NAVEGANDO.equals(estadoAtual)
+            && cliente.getCidade() != null && !cliente.getCidade().isEmpty()
+            && cliente.getUf() != null && !cliente.getUf().isEmpty()) {
 
-        tela.getTxtEndereco().setText(cliente.getEndereco() != null ? cliente.getEndereco() : "");
-        tela.getTxtNumero().setText(cliente.getNumero() != null ? cliente.getNumero() : "");
-        tela.getTxtCidade().setText(cliente.getCidade() != null ? cliente.getCidade() : "");
-        tela.getTxtObservacao().setText(cliente.getObservacao() != null ? cliente.getObservacao() : "");
+        tela.getTxtCEP().setText(formatarCEP(cliente.getCep()));
 
-        // Estado
-        if (cliente.getUf() != null && !cliente.getUf().isEmpty()) {
-            try {
-                tela.getCbEstado().setSelectedItem(UF.valueOf(cliente.getUf()));
-            } catch (IllegalArgumentException e) {
-                for (UF uf : UF.values()) {
-                    if (uf.getSigla().equalsIgnoreCase(cliente.getUf())) {
-                        tela.getCbEstado().setSelectedItem(uf);
-                        break;
-                    }
+    } else {
+        tela.getTxtCEP().setText(cliente.getCep() != null ? cliente.getCep() : "");
+    }
+
+    tela.getTxtEndereco().setText(cliente.getEndereco() != null ? cliente.getEndereco() : "");
+    tela.getTxtNumero().setText(cliente.getNumero() != null ? cliente.getNumero() : "");
+    tela.getTxtCidade().setText(cliente.getCidade() != null ? cliente.getCidade() : "");
+    tela.getTxtObservacao().setText(cliente.getObservacao() != null ? cliente.getObservacao() : "");
+
+    // Estado
+    if (cliente.getUf() != null && !cliente.getUf().isEmpty()) {
+        try {
+            tela.getCbEstado().setSelectedItem(UF.valueOf(cliente.getUf()));
+        } catch (IllegalArgumentException e) {
+            for (UF uf : UF.values()) {
+                if (uf.getSigla().equalsIgnoreCase(cliente.getUf())) {
+                    tela.getCbEstado().setSelectedItem(uf);
+                    break;
                 }
             }
         }
     }
+}
+
 
     // ================== SALVAR CLIENTE ==================
     public boolean salvarCliente(TelaDoCadastro tela, Cliente cliente, int clienteId) {
@@ -106,8 +109,6 @@ public class ControleDoCadastro {
                 JOptionPane.showMessageDialog(tela, "CPF inválido!");
                 return false;
             }
-            
-            
 
             // 3️⃣ Salvamento
             if (clienteId == -1) { // NOVO
@@ -137,10 +138,7 @@ public class ControleDoCadastro {
     }
 
     // ================== EDITAR CLIENTE ==================
-    public boolean editarCliente(TelaDoCadastro tela,
-            JTable tabelaClientes,
-            DefaultTableModel modelTabela) {
-
+    public boolean editarCliente(TelaDoCadastro tela, JTable tabelaClientes, DefaultTableModel modelTabela) {
         int linha = tabelaClientes.getSelectedRow();
         if (linha == -1) {
             JOptionPane.showMessageDialog(tela, "Selecione um cliente para editar!");
@@ -148,36 +146,17 @@ public class ControleDoCadastro {
         }
 
         try {
-            // ID (coluna oculta)
-            int id = (int) modelTabela.getValueAt(linha, 0);
+            int id = (int) modelTabela.getValueAt(linha, 0); // ID
+            String cpf = (String) modelTabela.getValueAt(linha, 2); // CPF
 
-            // CPF (coluna 2)
-            String cpf = (String) modelTabela.getValueAt(linha, 2);
-
-            Cliente c = clienteDAO.buscarPorCpf(cpf);
-            if (c == null) {
+            Cliente cliente = clienteDAO.buscarPorCpf(cpf);
+            if (cliente == null) {
                 JOptionPane.showMessageDialog(tela, "Cliente não encontrado!");
                 return false;
             }
 
-            // Preencher campos da tela
-            tela.setClienteId(c.getId());
-            tela.getTxtNome().setText(c.getNome());
-            tela.getTxtCPF().setText(formatarCPF(c.getCpf()));
-            tela.getCampoDataNascimento().setDate(c.getDataNascimento());
-            tela.getTxtEmail().setText(c.getEmail());
-            tela.getTxtTelefone().setText(formatarCelular(c.getTelefone()));
-            tela.getTxtCEP().setText(formatarCEP(c.getCep()));
-            tela.getTxtEndereco().setText(c.getEndereco());
-            tela.getTxtNumero().setText(c.getNumero());
-            tela.getTxtCidade().setText(c.getCidade());
-
-            if (c.getUf() != null) {
-                tela.getCbEstado().setSelectedItem(UF.valueOf(c.getUf()));
-            }
-
-            tela.getTxtObservacao().setText(c.getObservacao());
-
+            // Preenche campos usando o método centralizado
+            preencherCamposParaEdicao(tela, cliente);
             return true;
 
         } catch (Exception ex) {
@@ -344,7 +323,5 @@ public class ControleDoCadastro {
         String parte2 = numeros.substring(7);
         return String.format("(%s) %s-%s", ddd, parte1, parte2);
     }
-
-
 
 }
