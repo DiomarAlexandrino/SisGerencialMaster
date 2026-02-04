@@ -7,7 +7,11 @@ import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
+import sistemacadastrodecliente.model.enums.EstadoTela;
+import static sistemacadastrodecliente.model.enums.TipoValidacao.ALFA_NUMERICO;
+import static sistemacadastrodecliente.model.enums.TipoValidacao.APENAS_LETRAS;
 import static sistemacadastrodecliente.model.enums.TipoValidacao.CEP;
+import sistemacadastrodecliente.model.enums.UF;
 import sistemacadastrodecliente.view.SimpleDocumentListener;
 import sistemacadastrodecliente.view.TelaDoCadastro;
 
@@ -32,6 +36,10 @@ public class ValidadorFormulario {
     // =========================
     public void setControle(ControleEstadoTela controle) {
         this.controleEstado = controle;
+    }
+
+    public ControleEstadoTela getControle() {
+        return this.controleEstado;
     }
 
     // =========================
@@ -63,31 +71,49 @@ public class ValidadorFormulario {
     // VALIDAÇÃO
     // =========================
     public boolean validarCampo(JComponent campo) {
+
+        if (controleEstado != null
+                && EstadoTela.NAVEGANDO.equals(controleEstado.getEstadoAtual())) {
+            return true; // ✅ considera válido
+        }
+        boolean valido = true;
+        String mensagemErro = null;
+
         TipoValidacao tipo = campos.get(campo);
         if (tipo == null) {
             return true;
         }
 
-        boolean valido = false;
-        String mensagemErro = null;
-
+        // Primeiro, checa se está navegando
         switch (tipo) {
-            case TEXTO_OBRIGATORIO -> {
-                valido = !((JTextComponent) campo).getText().trim().isEmpty();
-                if (!valido) {
+            case NOME_OBRIGATORIO -> {
+                String texto = ((JTextComponent) campo).getText().trim();
+
+                if (texto.isEmpty()) {
+                    valido = false;
                     mensagemErro = "Campo obrigatório";
+                } else if (!texto.matches("[A-Za-zÀ-ÿ ]+")) {
+                    valido = false;
+                    mensagemErro = "Apenas letras são permitidas";
+
+                } else if (texto.length() < 2 || texto.length() > 80) {
+                    valido = false;
+                    mensagemErro = "Nome deve ter entre 2 e 80 caracteres";
+
+                } else {
+                    valido = true;
                 }
+
             }
             case CIDADE_OBRIGATORIA -> {
                 String cidade = telaCadastro.getTxtCidade().getText().trim();
-                System.out.println(cidade);
 
                 if (cidade.isEmpty()) {
                     valido = false;
                     mensagemErro = "Campo obrigatório";
                 } else if (!cidade.matches("[A-Za-zÀ-ÿ ]+")) {
                     valido = false;
-                    mensagemErro = "Cidade inválida (somente letras e espaços)";
+                    mensagemErro = "Cidade inválida (somente letras)";
                 } else if (cidade.length() < 2 || cidade.length() > 50) {
                     valido = false;
                     mensagemErro = "Cidade deve ter entre 2 e 50 caracteres";
@@ -101,9 +127,9 @@ public class ValidadorFormulario {
                 valido = texto.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
                 if (!valido) {
                     mensagemErro = "Email inválido";
-                } else if (texto.length() > 50) {
+                } else if (texto.length() > 80) {
                     valido = false;
-                    mensagemErro = "O Texto deve ter no máximo 100 caracteres";
+                    mensagemErro = "O Texto deve ter no máximo 80 caracteres";
                 } else {
                     valido = true;
                 }
@@ -128,57 +154,25 @@ public class ValidadorFormulario {
             }
             case COMBO_OBRIGATORIO -> {
                 JComboBox<?> combo = (JComboBox<?>) campo;
-                selecionado = combo.getSelectedItem();
+                Object sel = combo.getSelectedItem();
 
-                valido = selecionado != null && selecionado != sistemacadastrodecliente.model.enums.UF.UF;
+                valido = false;
+
+                if (sel instanceof sistemacadastrodecliente.model.enums.UF uf) {
+                    valido = uf != sistemacadastrodecliente.model.enums.UF.UF;
+                }
 
                 if (!valido) {
                     mensagemErro = "Selecione um estado válido";
-                    combo.setBorder(BorderFactory.createLineBorder(Color.RED));
-                    combo.setToolTipText(mensagemErro);
-                } else {
-                    combo.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-                    combo.setToolTipText(null);
                 }
             }
             case CEP -> {
-
-                if (!(campo instanceof JTextComponent)) {
-                    mensagemErro = "Componente inválido para CEP";
-                    break;
-                }
-
-                String texto = ((JTextComponent) campo).getText().replaceAll("\\D", ""); // só números
-
-                if (texto.isEmpty()) {
-                    atualizarBordaNeutra(campo);
-                    return true;
-                }
-
-                // Pega o campo da cidade do formulário diretamente
-                String cidade = null;
-                for (JComponent c : campos.keySet()) {
-                    if (campos.get(c) == TipoValidacao.CIDADE_OBRIGATORIA) {
-                        cidade = ((JTextComponent) c).getText().trim();
-                        break;
-                    }
-                }
-
-                String uf = selecionado != null ? selecionado.toString().split(" - ")[0] : "";
-
-                if (texto.length() < 8) {
-                    mensagemErro = "CEP incompleto";
-                } else if (cidade == null || cidade.isEmpty()) {
-                    mensagemErro = "Preencha a cidade antes de validar o CEP";
-                } else if (uf.isEmpty()) {
-                    mensagemErro = "Selecione o estado antes de validar o CEP";
-                } else if (ValidadorCEP.validar(texto, cidade, uf)) {
-                    valido = true;
-
+                if (campo instanceof JTextComponent tf) {
+                    validarCEPAoTeclar(tf);
+                    return false; // Retorno temporário, a validação será concluída no SwingWorker
                 } else {
-                    mensagemErro = "CEP inválido para a cidade/estado informados";
+                    mensagemErro = "Componente inválido para CEP";
                 }
-
             }
 
             case DATA_OBRIGATORIA -> {
@@ -217,12 +211,16 @@ public class ValidadorFormulario {
                     mensagemErro = "Telefone incompleto";
                 }
             }
-            case CAMPO_MAX_80 -> {
+            case ENDERECO_OBRIGATORIO -> {
                 String texto = ((JTextComponent) campo).getText().trim();
 
                 if (texto.isEmpty()) {
                     valido = false;
                     mensagemErro = "Nome é obrigatório";
+
+                } else if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
+                    valido = false;
+                    mensagemErro = "Apenas letras e números são permitidos";
                 } else if (texto.length() > 80) {
                     valido = false;
                     mensagemErro = "O Texto deve ter no máximo 80 caracteres";
@@ -230,9 +228,12 @@ public class ValidadorFormulario {
                     valido = true;
                 }
             }
-            case CAMPO_MAX_10 -> {
+            case NUMERO_OBRIGATORIO -> {
                 String texto = ((JTextComponent) campo).getText().trim();
-                if (texto.isEmpty()) {
+                if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
+                    valido = false;
+                    mensagemErro = "Apenas letras e números são permitidos";
+                } else if (texto.isEmpty()) {
                     valido = false;
                     mensagemErro = "Campo obrigatório";
                 } else if (texto.length() > 10) {
@@ -240,6 +241,24 @@ public class ValidadorFormulario {
                     mensagemErro = "O texto deve ter no máximo 10 caracteres";
                 } else {
                     valido = true; // ✅ Aqui a borda ficará verde
+                }
+            }
+
+            case APENAS_LETRAS -> {
+                String texto = ((JTextComponent) campo).getText().trim();
+                if (texto.isEmpty() || !texto.matches("[A-Za-zÀ-ÿ ]+")) {
+                    valido = false;
+                    mensagemErro = "Apenas letras são permitidas";
+                }
+            }
+
+            case ALFA_NUMERICO -> {
+                String texto = ((JTextComponent) campo).getText().trim();
+                if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
+                    valido = false;
+                    mensagemErro = "Apenas letras e números são permitidos";
+                } else {
+                    valido = true;
                 }
             }
 
@@ -265,12 +284,14 @@ public class ValidadorFormulario {
             TipoValidacao tipo = entry.getValue();
 
             return switch (tipo) {
-                case TEXTO_OBRIGATORIO ->
+                case NOME_OBRIGATORIO ->
                     !((JTextComponent) campo).getText().trim().isEmpty();
 
                 case CIDADE_OBRIGATORIA -> {
                     String cidade = ((JTextComponent) campo).getText().trim();
-                    yield !cidade.isEmpty() && cidade.matches("[A-Za-zÀ-ÿ ]+") && cidade.length() >= 2;
+                    // Remove números ou símbolos caso existam
+                    cidade = cidade.replaceAll("[0-9]", "");
+                    yield !cidade.isEmpty() && cidade.matches("[\\p{L} ]+") && cidade.length() >= 2 && cidade.length() <= 50;
                 }
 
                 case EMAIL -> {
@@ -286,28 +307,27 @@ public class ValidadorFormulario {
                 case TELEFONE ->
                     ((JTextComponent) campo).getText().replaceAll("\\D", "").length() == 11;
 
-                case CEP -> {
-                    String texto = ((JTextComponent) campo).getText().replaceAll("\\D", "");
-                    // Aqui você pode decidir se valida o CEP completo ou apenas o tamanho
-                    yield texto.length() == 8;
-                }
-
                 case COMBO_OBRIGATORIO -> {
                     JComboBox<?> combo = (JComboBox<?>) campo;
                     Object sel = combo.getSelectedItem();
-                    yield sel != null && sel != sistemacadastrodecliente.model.enums.UF.UF;
+
+                    if (sel == null) {
+                        yield false;
+                    }
+
+                    if (sel instanceof sistemacadastrodecliente.model.enums.UF ufEnum) {
+                        yield ufEnum != sistemacadastrodecliente.model.enums.UF.UF;
+                    }
+
+                    yield !sel.toString().toLowerCase().contains("selecione");
                 }
 
                 case DATA_OBRIGATORIA ->
                     ((CampoDataComCalendario) campo).getDate() != null;
 
-                case CAMPO_MAX_80 -> {
+                case ENDERECO_OBRIGATORIO -> {
                     String texto = ((JTextComponent) campo).getText().trim();
                     yield !texto.isEmpty() && texto.length() <= 80;
-                }
-                case CAMPO_MAX_10 -> {
-                    String texto = ((JTextComponent) campo).getText().trim();
-                    yield !texto.isEmpty() && texto.length() <= 10;
                 }
 
                 default ->
@@ -349,4 +369,63 @@ public class ValidadorFormulario {
         // btnSalvar é o botão da sua TelaDoCadastro
         telaCadastro.getBtnSalvar().setEnabled(tudoValido);
     }
+
+    private JDialog criarDialogCarregando(String mensagem) {
+        JDialog dialog = new JDialog(telaCadastro, "Aguarde", true);
+        JLabel label = new JLabel(mensagem, JLabel.CENTER);
+        label.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        dialog.getContentPane().add(label);
+        dialog.setSize(200, 80);
+        dialog.setLocationRelativeTo(telaCadastro);
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        return dialog;
+    }
+
+    private void validarCEPAoTeclar(JTextComponent campo) {
+        String cep = campo.getText().replaceAll("\\D", "");
+        if (cep.isEmpty() || cep.length() < 8) {
+            atualizarBordaNeutra(campo);
+            return;
+        }
+
+        JDialog carregando = criarDialogCarregando("Validando CEP...");
+
+        SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
+            private String mensagemErroLocal = null;
+
+            @Override
+            protected Boolean doInBackground() {
+                String cidade = telaCadastro.getTxtCidade().getText().trim();
+                Object sel = telaCadastro.getCbEstado().getSelectedItem();
+                String uf = sel instanceof sistemacadastrodecliente.model.enums.UF estado
+                        ? estado.getSigla()
+                        : "";
+
+                boolean validoLocal = ValidadorCEP.validar(cep, cidade, uf);
+                if (!validoLocal) {
+                    mensagemErroLocal = "CEP inválido para a cidade/estado informados";
+                }
+                return validoLocal;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    boolean resultado = get();
+                    atualizarBordaETooltip(campo, resultado, mensagemErroLocal);
+                    if (controleEstado != null) {
+                        controleEstado.atualizarFormularioValido(formularioValido());
+                    }
+                } catch (Exception e) {
+                    atualizarBordaETooltip(campo, false, "Erro na validação do CEP");
+                } finally {
+                    carregando.dispose();
+                }
+            }
+        };
+
+        worker.execute();
+        carregando.setVisible(true);
+    }
+
 }
