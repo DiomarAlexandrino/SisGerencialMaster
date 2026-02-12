@@ -53,24 +53,32 @@ Esses procedimentos asseguram a correta comunicação entre a aplicação e o ba
 O banco de dados foi modelado utilizando o PostgreSQL, sendo criada a tabela `clientes`, responsável por armazenar as informações cadastrais dos usuários do sistema. A estrutura da tabela é apresentada a seguir:
 
 ```sql
+CREATE SEQUENCE IF NOT EXISTS public.clientes_id_seq;
+
 CREATE TABLE IF NOT EXISTS public.clientes
 (
-    id integer NOT NULL DEFAULT nextval('cliente_id_seq'::regclass),
-    nome character varying(100) NOT NULL,
-    idade integer,
-    cpf character varying(11) NOT NULL,
+    id integer NOT NULL DEFAULT nextval('public.clientes_id_seq'),
+    nome varchar(100) NOT NULL,
+    idade integer CHECK (idade >= 0),
+    cpf varchar(11) NOT NULL,
     data_nascimento date,
-    email character varying(100),
-    telefone character varying(20),
-    endereco character varying(150),
-    numero character varying(10),
-    cidade character varying(100),
-    uf character(2),
-    cep character varying(8),
+    email varchar(100),
+    telefone varchar(20),
+    endereco varchar(150),
+    numero varchar(10),
+    cidade varchar(100),
+    uf char(2),
+    cep varchar(8),
     observacao text,
-    CONSTRAINT cliente_pkey PRIMARY KEY (id),
-    CONSTRAINT cliente_cpf_key UNIQUE (cpf)
+    
+    CONSTRAINT clientes_pkey PRIMARY KEY (id),
+    CONSTRAINT clientes_cpf_key UNIQUE (cpf),
+    CONSTRAINT clientes_email_key UNIQUE (email),
+    CONSTRAINT clientes_uf_check CHECK (char_length(uf) = 2)
 );
+
+ALTER SEQUENCE public.clientes_id_seq 
+OWNED BY public.clientes.id
 ```
 
 A tabela possui como chave primária o campo `id` e uma restrição de unicidade para o campo `cpf`, garantindo que não haja duplicidade de registros para um mesmo cliente.
