@@ -53,6 +53,19 @@ Esses procedimentos asseguram a correta comunicação entre a aplicação e o ba
 O banco de dados foi modelado utilizando o PostgreSQL, sendo criada a tabela `clientes`, responsável por armazenar as informações cadastrais dos usuários do sistema. A estrutura da tabela é apresentada a seguir:
 
 ```sql
+CREATE DATABASE bd_cadastro_cliente
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'pt-BR'
+    LC_CTYPE = 'pt-BR'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
+
+
 CREATE SEQUENCE IF NOT EXISTS public.clientes_id_seq;
 
 CREATE TABLE IF NOT EXISTS public.clientes
