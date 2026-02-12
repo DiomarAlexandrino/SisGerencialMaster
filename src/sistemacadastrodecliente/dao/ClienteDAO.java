@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import sistemacadastrodecliente.connection.Conexao;
+import sistemacadastrodecliente.connection.Conexao;
 import sistemacadastrodecliente.model.Cliente;
 
 public class ClienteDAO {
