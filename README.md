@@ -106,3 +106,170 @@ OWNED BY public.clientes.id
 A tabela possui como chave primária o campo `id` e uma restrição de unicidade para o campo `cpf`, garantindo que não haja duplicidade de registros para um mesmo cliente.
 
 ---
+
+# Sistema de Cadastro de Clientes
+
+Aplicação desktop desenvolvida em **Java Swing** para gerenciamento de clientes.
+O sistema permite cadastrar, editar, excluir e visualizar clientes com validação de formulário, busca automática de endereço via CEP e suporte a temas visuais.
+
+---
+
+# 📋 Funcionalidades
+
+* Cadastro de clientes
+* Edição de clientes
+* Exclusão de clientes
+* Listagem de clientes em tabela
+* Validação automática de campos
+* Busca automática de endereço via CEP
+* Alternância de tema (claro / escuro)
+* Máscaras de CPF, telefone e CEP
+
+---
+
+# 🧠 Arquitetura do Projeto
+
+O sistema foi desenvolvido utilizando uma arquitetura inspirada no padrão **MVC (Model - View - Controller)**.
+
+```
+View
+│
+├── TelaDoCadastro
+│
+Controller
+│
+├── ControleDoCadastro
+├── ControleEstadoTela
+│
+Model
+│
+├── Cliente
+│
+DAO
+│
+├── ClienteDAO
+│
+Validação
+│
+├── ValidadorFormulario
+├── ValidadorCEP
+├── TipoValidacao
+│
+Componentes
+│
+├── CampoDataComCalendario
+├── ComboBoxUF
+│
+Util
+│
+├── Tema
+├── TemaEnum
+├── UF
+```
+
+---
+
+# 📂 Estrutura do Projeto
+
+```
+src
+│
+├── controller
+│   ├── ControleDoCadastro.java
+│   └── ControleEstadoTela.java
+│
+├── dao
+│   └── ClienteDAO.java
+│
+├── model
+│   └── Cliente.java
+│
+├── view
+│   └── TelaDoCadastro.java
+│
+├── validation
+│   ├── ValidadorFormulario.java
+│   ├── ValidadorCEP.java
+│   └── TipoValidacao.java
+│
+├── components
+│   ├── CampoDataComCalendario.java
+│   └── ComboBoxUF.java
+│
+└── util
+    ├── Tema.java
+    ├── TemaEnum.java
+    └── UF.java
+```
+
+---
+
+# 📚 Documentação Completa
+
+A documentação completa do projeto (arquitetura, DAO, controller, validação, CEP, tema e fluxo do sistema) está disponível no arquivo:
+
+➡️ **[Abrir documentação completa](src/document.md)**
+
+---
+
+# ⚙️ Tecnologias Utilizadas
+
+* **Java**
+* **Java Swing**
+* **JDBC**
+* **MVC Pattern**
+* **MaskFormatter**
+* **SwingWorker**
+
+---
+
+# 🚀 Como Executar o Projeto
+
+1. Clone o repositório
+
+```
+git clone https://github.com/seu-usuario/seu-repositorio.git
+```
+
+2. Abra o projeto em uma IDE Java
+
+Exemplos:
+
+* IntelliJ IDEA
+* NetBeans
+* Eclipse
+
+3. Execute a classe principal
+
+```
+TelaDoCadastro.java
+```
+
+---
+
+# 🖼 Interface do Sistema
+
+*(Você pode adicionar prints aqui depois)*
+
+```
+docs/imagens/tela-cadastro.png
+```
+
+---
+
+# 🔮 Melhorias Futuras
+
+* Pesquisa de clientes
+* Paginação da tabela
+* Exportação para Excel
+* Exportação para PDF
+* Sistema de login
+* Histórico de alterações
+* Versão Web com API REST
+
+---
+
+# 👨‍💻 Autor
+
+Projeto desenvolvido para estudo de **Java, Swing e arquitetura MVC**.
+
