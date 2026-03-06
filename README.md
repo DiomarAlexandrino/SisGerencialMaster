@@ -320,7 +320,7 @@ Contendo explicações detalhadas sobre:
 
 # 👨‍💻 Autor
 
-Projeto desenvolvido para estudo de:
+Projeto desenvolvido por Diomar ALexanrino usando as tecnologias abaixo :
 
 * **Java**
 * **Java Swing**
