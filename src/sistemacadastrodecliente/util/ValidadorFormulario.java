@@ -5,35 +5,31 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.HashMap;
 import java.util.Map;
 import sistemacadastrodecliente.model.enums.EstadoTela;
-import static sistemacadastrodecliente.model.enums.TipoValidacao.ALFA_NUMERICO;
-import static sistemacadastrodecliente.model.enums.TipoValidacao.APENAS_LETRAS;
-import static sistemacadastrodecliente.model.enums.TipoValidacao.CEP;
+import static sistemacadastrodecliente.model.enums.TipoValidacao.*;
 import sistemacadastrodecliente.model.enums.UF;
 import sistemacadastrodecliente.view.SimpleDocumentListener;
 import sistemacadastrodecliente.view.TelaDoCadastro;
 
 /**
- * Validador de formulário com validação em tempo real. Atualiza borda, tooltip
- * e avisa o ControleEstadoTela.
+ * Validador de formulário com validação em tempo real. Exibe popup apenas ao
+ * sair do campo.
  */
 public class ValidadorFormulario {
 
     private final Map<JComponent, TipoValidacao> campos = new HashMap<>();
     private ControleEstadoTela controleEstado;
-    private Object selecionado;
-    private String valorCidade;
     private TelaDoCadastro telaCadastro;
+    private boolean validando;
 
     public ValidadorFormulario(TelaDoCadastro telaCadastro) {
         this.telaCadastro = telaCadastro;
     }
 
-    // =========================
-    // CONFIGURAÇÃO DO CONTROLE
-    // =========================
     public void setControle(ControleEstadoTela controle) {
         this.controleEstado = controle;
     }
@@ -51,381 +47,395 @@ public class ValidadorFormulario {
         }
         campos.put(campo, tipo);
         adicionarListener(campo);
-        validarCampo(campo); // valida imediatamente
+        validarCampo(campo, false); // valida imediatamente sem popup
     }
 
     // =========================
     // LISTENERS
     // =========================
     private void adicionarListener(JComponent campo) {
+
+        // Validação ao perder foco → mostra popup se inválido
+        campo.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                validarCampo(campo, true); // mostrar popup
+            }
+        });
+
+        // Validação em tempo real sem popup
         if (campo instanceof JTextComponent tf) {
-            tf.getDocument().addDocumentListener(SimpleDocumentListener.of(() -> validarCampo(campo)));
+            tf.getDocument().addDocumentListener(SimpleDocumentListener.of(() -> validarCampo(campo, false)));
         } else if (campo instanceof JComboBox<?> combo) {
-            combo.addActionListener(e -> validarCampo(campo));
+            combo.addActionListener(e -> validarCampo(campo, false));
         } else if (campo instanceof CampoDataComCalendario data) {
-            data.adicionarListenerValidacao(() -> validarCampo(campo));
+
+            // Digitação → sem popup
+            data.adicionarListenerValidacao(() -> validarCampo(campo, false));
+
+            // FocusLost → com popup
+            data.tfData.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    validarCampo(campo, true);
+                }
+            });
+
+            // 🔥 Clique no calendário → com popup
+            data.setOnDateSelected(() -> validarCampo(campo, true));
         }
     }
 
     // =========================
     // VALIDAÇÃO
     // =========================
-    public boolean validarCampo(JComponent campo) {
-
-        if (controleEstado != null
-                && EstadoTela.NAVEGANDO.equals(controleEstado.getEstadoAtual())) {
-            return true; // ✅ considera válido
-        }
-        boolean valido = true;
-        String mensagemErro = null;
-
-        TipoValidacao tipo = campos.get(campo);
-        if (tipo == null) {
+// =========================
+// VALIDAÇÃO (COM BORDA VERDE)
+// =========================
+    public boolean validarCampo(JComponent campo, boolean mostrarPopup) {
+        // PREVENIR RECURSÃO INFINITA
+        if (validando) {
             return true;
         }
 
-        // Primeiro, checa se está navegando
-        switch (tipo) {
-            case NOME_OBRIGATORIO -> {
-                String texto = ((JTextComponent) campo).getText().trim();
+        try {
+            validando = true;
 
-                if (texto.isEmpty()) {
-                    valido = false;
-                    mensagemErro = "Campo obrigatório";
-                } else if (!texto.matches("[A-Za-zÀ-ÿ ]+")) {
-                    valido = false;
-                    mensagemErro = "Apenas letras são permitidas";
-
-                } else if (texto.length() < 2 || texto.length() > 80) {
-                    valido = false;
-                    mensagemErro = "Nome deve ter entre 2 e 80 caracteres";
-
-                } else {
-                    valido = true;
-                }
-
+            // Verifica estado da tela
+            EstadoTela estado = null;
+            if (controleEstado != null) {
+                estado = controleEstado.getEstadoAtual();
             }
-            case CIDADE_OBRIGATORIA -> {
-                String cidade = telaCadastro.getTxtCidade().getText().trim();
-
-                if (cidade.isEmpty()) {
-                    valido = false;
-                    mensagemErro = "Campo obrigatório";
-                } else if (!cidade.matches("[A-Za-zÀ-ÿ ]+")) {
-                    valido = false;
-                    mensagemErro = "Cidade inválida (somente letras)";
-                } else if (cidade.length() < 2 || cidade.length() > 50) {
-                    valido = false;
-                    mensagemErro = "Cidade deve ter entre 2 e 50 caracteres";
-                } else {
-                    valido = true;
-                }
+            if (estado != EstadoTela.ADICIONANDO && estado != EstadoTela.EDITANDO) {
+                atualizarBordaNeutra(campo);
+                return true;
             }
 
-            case EMAIL -> {
-                String texto = ((JTextComponent) campo).getText().trim();
-                valido = texto.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
-                if (!valido) {
-                    mensagemErro = "Email inválido";
-                } else if (texto.length() > 80) {
-                    valido = false;
-                    mensagemErro = "O Texto deve ter no máximo 80 caracteres";
-                } else {
-                    valido = true;
-                }
-            }
-            case CPF -> {
-                String texto = ((JTextComponent) campo).getText().replaceAll("[^0-9]", "");
-                if (texto.length() < 11) {
-                    mensagemErro = "CPF incompleto";
-                } else if (ValidadorCPF.validar(texto)) {
-                    valido = true;
-                } else {
-                    mensagemErro = "CPF inválido";
-                }
+            // Se não estiver em modo de edição, apenas coloca borda neutra e retorna
+            if (estado != EstadoTela.ADICIONANDO && estado != EstadoTela.EDITANDO) {
+                atualizarBordaNeutra(campo);
+                return true;
             }
 
-            case FORMATADO_OBRIGATORIO -> {
-                String texto = ((JTextComponent) campo).getText().replaceAll("[^0-9]", "");
-                valido = !texto.isEmpty();
-                if (!valido) {
-                    mensagemErro = "Campo obrigatório";
-                }
+            boolean valido = true;
+            String mensagemErro = null;
+            TipoValidacao tipo = campos.get(campo);
+            if (tipo == null) {
+                return true;
             }
-            case COMBO_OBRIGATORIO -> {
-                JComboBox<?> combo = (JComboBox<?>) campo;
-                Object sel = combo.getSelectedItem();
 
+            try {
+                switch (tipo) {
+                    case NOME_OBRIGATORIO -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Campo obrigatório";
+                        } else if (!texto.matches("[A-Za-zÀ-ÿ ]+")) {
+                            valido = false;
+                            mensagemErro = "Apenas letras são permitidas";
+                        } else if (texto.length() < 2 || texto.length() > 80) {
+                            valido = false;
+                            mensagemErro = "Nome deve ter entre 2 e 80 caracteres";
+                        }
+                    }
+                    case CIDADE_OBRIGATORIA -> {
+                        String cidade = ((JTextComponent) campo).getText().trim();
+                        if (cidade.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Campo obrigatório";
+                        } else if (!cidade.matches("[A-Za-zÀ-ÿ ]+")) {
+                            valido = false;
+                            mensagemErro = "Cidade inválida (somente letras)";
+                        } else if (cidade.length() < 2 || cidade.length() > 50) {
+                            valido = false;
+                            mensagemErro = "Cidade deve ter entre 2 e 50 caracteres";
+                        }
+                    }
+                    case EMAIL -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Campo obrigatório";
+                        } else if (!texto.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
+                            valido = false;
+                            mensagemErro = "Email inválido";
+                        } else if (texto.length() > 40) {
+                            valido = false;
+                            mensagemErro = "O email deve ter no máximo 40 caracteres";
+                        }
+                    }
+                    case CPF -> {
+                        String texto = ((JTextComponent) campo).getText().replaceAll("\\D", "");
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Campo obrigatório";
+                        } else if (texto.length() < 11) {
+                            valido = false;
+                            mensagemErro = "CPF incompleto";
+                        } else if (!ValidadorCPF.validar(texto)) {
+                            valido = false;
+                            mensagemErro = "CPF inválido";
+                        }
+                    }
+                    case TELEFONE -> {
+                        String numeros = ((JTextComponent) campo).getText().replaceAll("\\D", "");
+                        if (numeros.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Telefone obrigatório";
+                        } else if (numeros.length() != 11) {
+                            valido = false;
+                            mensagemErro = "Telefone incompleto (DDD + 9 números)";
+                        }
+                    }
+                    case COMBO_OBRIGATORIO -> {
+                        JComboBox<?> combo = (JComboBox<?>) campo;
+                        Object sel = combo.getSelectedItem();
+                        if (sel == null || (sel instanceof UF uf && uf == UF.UF)) {
+                            valido = false;
+                            mensagemErro = "Selecione um estado válido";
+                        }
+                    }
+                    case DATA_OBRIGATORIA -> {
+                        CampoDataComCalendario componenteData = (CampoDataComCalendario) campo;
+                        String texto = componenteData.tfData.getText().trim();
+
+                        if (texto.isEmpty() || texto.replace("_", "").replace("/", "").isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Data é obrigatória";
+                        } else if (texto.contains("_")) {
+                            valido = false;
+                            mensagemErro = "Data incompleta";
+                        } else {
+                            try {
+                                java.time.LocalDate data = componenteData.getDate();
+                                if (data == null) {
+                                    valido = false;
+                                    mensagemErro = "Data inválida";
+                                } else {
+                                    String motivo = ValidarIdade.validarIdadeComMotivo(data);
+                                    if (motivo != null) {
+                                        valido = false;
+                                        mensagemErro = motivo;
+                                    } else {
+                                        valido = true;
+                                        mensagemErro = null;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                valido = false;
+                                mensagemErro = "Data inválida";
+                            }
+                        }
+                    }
+                    case CEP -> {
+                        // Só valida CEP se estivermos editando/adicionando
+                        if (estado == EstadoTela.ADICIONANDO || estado == EstadoTela.EDITANDO) {
+                            String cep = ((JTextComponent) campo).getText().replaceAll("\\D", "");
+                            if (cep.isEmpty()) {
+                                valido = false;
+                                mensagemErro = "CEP obrigatório";
+                            } else if (cep.length() < 8) {
+                                valido = false;
+                                mensagemErro = "CEP incompleto";
+                            } else {
+                                valido = true;
+                                mensagemErro = null;
+                            }
+                        }
+                    }
+                    case ENDERECO_OBRIGATORIO -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Endereço obrigatório";
+                        }
+                    }
+                    case BAIRRO_OBRIGATORIO -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Bairro obrigatório";
+                        }
+                    }
+                    case NUMERO_OBRIGATORIO -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (texto.isEmpty()) {
+                            valido = false;
+                            mensagemErro = "Número obrigatório";
+                        }
+                    }
+                    case APENAS_LETRAS -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (!texto.isEmpty() && !texto.matches("[A-Za-zÀ-ÿ ]+")) {
+                            valido = false;
+                            mensagemErro = "Apenas letras são permitidas";
+                        }
+                    }
+                    case ALFA_NUMERICO -> {
+                        String texto = ((JTextComponent) campo).getText().trim();
+                        if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
+                            valido = false;
+                            mensagemErro = "Apenas letras e números são permitidos";
+                        }
+                    }
+                }
+            } catch (Exception e) {
                 valido = false;
-
-                if (sel instanceof sistemacadastrodecliente.model.enums.UF uf) {
-                    valido = uf != sistemacadastrodecliente.model.enums.UF.UF;
-                }
-
-                if (!valido) {
-                    mensagemErro = "Selecione um estado válido";
-                }
-            }
-            case CEP -> {
-                if (campo instanceof JTextComponent tf) {
-                    validarCEPAoTeclar(tf);
-                    return false; // Retorno temporário, a validação será concluída no SwingWorker
-                } else {
-                    mensagemErro = "Componente inválido para CEP";
-                }
+                mensagemErro = "Erro na validação";
+                e.printStackTrace();
             }
 
-            case DATA_OBRIGATORIA -> {
-                CampoDataComCalendario componenteData = (CampoDataComCalendario) campo;
-                // O  método getDate() já retorna null se:
-                // 1. Estiver vazio/incompleto
-                // 2. A data for inexistente (ex: 31/02)
-                // 3. A idade for menor que 12 anos
-                java.time.LocalDate data = componenteData.getDate();
+            // Atualiza borda e tooltip
+            atualizarBordaETooltip(campo, valido, mensagemErro);
 
-                if (data == null) {
-                    valido = false;
-                    // Precisamos descobrir por que é null para dar a mensagem correta
-                    String texto = componenteData.tfData.getText().replace("_", "").replace("/", "").trim();
-                    if (texto.isEmpty()) {
-                        mensagemErro = "Data é obrigatória";
-                    } else {
-                        mensagemErro = "Data inválida ou idade mínima de 12 anos não atingida";
-                    }
-                } else {
-                    valido = true;
-                    mensagemErro = null;
-                }
-            }
-            case TELEFONE -> {
-                String texto = ((JTextComponent) campo).getText();
-                String numeros = texto.replaceAll("\\D", "");
-
-                if (numeros.isEmpty()) {
-                    valido = false;
-                    mensagemErro = "Telefone obrigatório";
-                } else if (numeros.length() == 11) {
-                    valido = true; // ✅ SOMENTE aqui fica verde
-                } else {
-                    valido = false;
-                    mensagemErro = "Telefone incompleto";
-                }
-            }
-            case ENDERECO_OBRIGATORIO -> {
-                String texto = ((JTextComponent) campo).getText().trim();
-
-                if (texto.isEmpty()) {
-                    valido = false;
-                    mensagemErro = "Nome é obrigatório";
-
-                } else if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
-                    valido = false;
-                    mensagemErro = "Apenas letras e números são permitidos";
-                } else if (texto.length() > 80) {
-                    valido = false;
-                    mensagemErro = "O Texto deve ter no máximo 80 caracteres";
-                } else {
-                    valido = true;
-                }
-            }
-            case NUMERO_OBRIGATORIO -> {
-                String texto = ((JTextComponent) campo).getText().trim();
-                if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
-                    valido = false;
-                    mensagemErro = "Apenas letras e números são permitidos";
-                } else if (texto.isEmpty()) {
-                    valido = false;
-                    mensagemErro = "Campo obrigatório";
-                } else if (texto.length() > 10) {
-                    valido = false;
-                    mensagemErro = "O texto deve ter no máximo 10 caracteres";
-                } else {
-                    valido = true; // ✅ Aqui a borda ficará verde
-                }
+            // Mostra popup apenas em ADICIONANDO/EDITANDO
+            if (!valido && mostrarPopup && (estado == EstadoTela.ADICIONANDO || estado == EstadoTela.EDITANDO)) {
+                mostrarPopupAviso(mensagemErro, campo);
             }
 
-            case APENAS_LETRAS -> {
-                String texto = ((JTextComponent) campo).getText().trim();
-                if (texto.isEmpty() || !texto.matches("[A-Za-zÀ-ÿ ]+")) {
-                    valido = false;
-                    mensagemErro = "Apenas letras são permitidas";
-                }
+            // Atualiza botão Salvar
+            if (controleEstado != null) {
+                controleEstado.atualizarFormularioValido(formularioValido());
             }
 
-            case ALFA_NUMERICO -> {
-                String texto = ((JTextComponent) campo).getText().trim();
-                if (!texto.isEmpty() && !texto.matches("[A-Za-z0-9 ]+")) {
-                    valido = false;
-                    mensagemErro = "Apenas letras e números são permitidos";
-                } else {
-                    valido = true;
-                }
-            }
-
-        }
-        if (!valido) {
-            // Aqui você pode exibir mensagem de erro ou armazenar em algum lugar
-            System.out.println(mensagemErro);
+            return valido;
+        } finally {
+            validando = false;
         }
 
-        atualizarBordaETooltip(campo, valido, mensagemErro);
-
-        // 🔔 AVISA O CONTROLE DE ESTADO
-        if (controleEstado != null) {
-            controleEstado.atualizarFormularioValido(formularioValido());
-        }
-
-        return valido;
     }
-
-    public boolean formularioValido() {
-        return campos.entrySet().stream().allMatch(entry -> {
-            JComponent campo = entry.getKey();
-            TipoValidacao tipo = entry.getValue();
-
-            return switch (tipo) {
-                case NOME_OBRIGATORIO ->
-                    !((JTextComponent) campo).getText().trim().isEmpty();
-
-                case CIDADE_OBRIGATORIA -> {
-                    String cidade = ((JTextComponent) campo).getText().trim();
-                    // Remove números ou símbolos caso existam
-                    cidade = cidade.replaceAll("[0-9]", "");
-                    yield !cidade.isEmpty() && cidade.matches("[\\p{L} ]+") && cidade.length() >= 2 && cidade.length() <= 50;
-                }
-
-                case EMAIL -> {
-                    String texto = ((JTextComponent) campo).getText().trim();
-                    yield texto.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$") && texto.length() <= 50;
-                }
-
-                case CPF -> {
-                    String texto = ((JTextComponent) campo).getText().replaceAll("[^0-9]", "");
-                    yield texto.length() == 11 && ValidadorCPF.validar(texto);
-                }
-
-                case TELEFONE ->
-                    ((JTextComponent) campo).getText().replaceAll("\\D", "").length() == 11;
-
-                case COMBO_OBRIGATORIO -> {
-                    JComboBox<?> combo = (JComboBox<?>) campo;
-                    Object sel = combo.getSelectedItem();
-
-                    if (sel == null) {
-                        yield false;
-                    }
-
-                    if (sel instanceof sistemacadastrodecliente.model.enums.UF ufEnum) {
-                        yield ufEnum != sistemacadastrodecliente.model.enums.UF.UF;
-                    }
-
-                    yield !sel.toString().toLowerCase().contains("selecione");
-                }
-
-                case DATA_OBRIGATORIA ->
-                    ((CampoDataComCalendario) campo).getDate() != null;
-
-                case ENDERECO_OBRIGATORIO -> {
-                    String texto = ((JTextComponent) campo).getText().trim();
-                    yield !texto.isEmpty() && texto.length() <= 80;
-                }
-
-                default ->
-                    true;
-            };
-        });
-    }
-
     // =========================
     // BORDA E TOOLTIP
     // =========================
+    // =========================
+    // BORDA E TOOLTIP (COM VERDE)
+    // =========================
+
     private void atualizarBordaETooltip(JComponent campo, boolean valido, String mensagemErro) {
         Color cor = valido ? Color.GREEN : Color.RED;
+        int espessura = valido ? 2 : 2; // Pode ajustar a espessura se quiser
 
         if (campo instanceof CampoDataComCalendario data) {
             data.setCampoValido(valido);
             data.setToolTipText(mensagemErro);
+            if (valido) {
+                data.setBorder(new LineBorder(Color.GREEN, 2));
+            } else {
+                data.setBorder(new LineBorder(Color.RED, 2));
+            }
         } else {
-            campo.setBorder(new LineBorder(cor, 2));
+            campo.setBorder(new LineBorder(cor, espessura));
             campo.setToolTipText(mensagemErro);
         }
+    }
+
+    private void atualizarBordaNeutra(JComponent campo) {
+        if (campo instanceof CampoDataComCalendario data) {
+            data.setBorder(new LineBorder(Color.GRAY, 1));
+        } else {
+            campo.setBorder(new LineBorder(Color.GRAY, 1));
+        }
+        campo.setToolTipText(null);
+    }
+
+    public boolean formularioValido() {
+        return campos.keySet().stream().allMatch(c -> validarCampo(c, false));
+    }
+
+    // =========================
+    // POPUP
+    // =========================
+    public void mostrarPopupAviso(String mensagem, JComponent campo) {
+        if (mensagem == null || mensagem.isBlank() || campo == null) {
+            return;
+        }
+
+        JWindow popup = new JWindow(telaCadastro);
+        popup.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel painel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(255, 250, 205));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.setColor(new Color(0, 0, 0, 50));
+                g2.fillRoundRect(2, 2, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        painel.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        painel.add(new JLabel(mensagem));
+        popup.add(painel);
+        popup.pack();
+
+        try {
+            Point pos = campo.getLocationOnScreen();
+            int x = pos.x;
+            int y = pos.y - popup.getHeight() - 5;
+            if (y < 0) {
+                y = pos.y + campo.getHeight() + 5;
+            }
+            popup.setLocation(x, y);
+        } catch (Exception ex) {
+            popup.setLocationRelativeTo(campo);
+        }
+
+        popup.setVisible(true);
+        new Timer(3000, e -> popup.dispose()).start();
+    }
+
+    // =========================
+    // CEP (Assíncrono)
+    // =========================
+    private void validarCEPAoTeclar(JTextComponent campo) {
+        String cep = campo.getText().replaceAll("\\D", "");
+        if (cep.isEmpty() || cep.length() < 8) {
+            SwingUtilities.invokeLater(() -> atualizarBordaNeutra(campo));
+            return;
+        }
+        // Aqui você mantém seu SwingWorker do CEP
+        // popup será mostrado só ao focusLost pelo listener
     }
 
     public void revalidarCEP() {
         for (JComponent campo : campos.keySet()) {
             if (campos.get(campo) == TipoValidacao.CEP) {
-                validarCampo(campo);
+                validarCampo(campo, false);
                 break;
             }
         }
     }
 
-    private void atualizarBordaNeutra(JComponent campo) {
-        campo.setBorder(new LineBorder(Color.GRAY, 1));
-        campo.setToolTipText(null);
-    }
-
-    public void atualizarFormularioValido(boolean tudoValido) {
-        // btnSalvar é o botão da sua TelaDoCadastro
-        telaCadastro.getBtnSalvar().setEnabled(tudoValido);
-    }
-
-    private JDialog criarDialogCarregando(String mensagem) {
-        JDialog dialog = new JDialog(telaCadastro, "Aguarde", true);
-        JLabel label = new JLabel(mensagem, JLabel.CENTER);
-        label.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        dialog.getContentPane().add(label);
-        dialog.setSize(200, 80);
-        dialog.setLocationRelativeTo(telaCadastro);
-        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        return dialog;
-    }
-
-    private void validarCEPAoTeclar(JTextComponent campo) {
-        String cep = campo.getText().replaceAll("\\D", "");
-        if (cep.isEmpty() || cep.length() < 8) {
-            atualizarBordaNeutra(campo);
-            return;
+    // ValidadorFormulario.java
+    public boolean validarCampoSemPopup(Object campo) {
+        // Verifica se o campo é do tipo CampoDataComCalendario
+        if (campo instanceof CampoDataComCalendario componenteData) {
+            java.time.LocalDate data = componenteData.getDate();
+            if (data == null) {
+                // Campo vazio ou inválido
+                return false;
+            } else {
+                // Opcional: validar idade ou outras regras
+                String motivo = ValidarIdade.validarIdadeComMotivo(data);
+                return motivo == null;
+            }
         }
 
-        JDialog carregando = criarDialogCarregando("Validando CEP...");
+        // Adicione outros tipos de campo aqui, se necessário
+        if (campo instanceof JTextField textField) {
+            String texto = textField.getText().trim();
+            return !texto.isEmpty();
+        }
 
-        SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
-            private String mensagemErroLocal = null;
+        if (campo instanceof JComboBox combo) {
+            return combo.getSelectedItem() != null;
+        }
 
-            @Override
-            protected Boolean doInBackground() {
-                String cidade = telaCadastro.getTxtCidade().getText().trim();
-                Object sel = telaCadastro.getCbEstado().getSelectedItem();
-                String uf = sel instanceof sistemacadastrodecliente.model.enums.UF estado
-                        ? estado.getSigla()
-                        : "";
-
-                boolean validoLocal = ValidadorCEP.validar(cep, cidade, uf);
-                if (!validoLocal) {
-                    mensagemErroLocal = "CEP inválido para a cidade/estado informados";
-                }
-                return validoLocal;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    boolean resultado = get();
-                    atualizarBordaETooltip(campo, resultado, mensagemErroLocal);
-                    if (controleEstado != null) {
-                        controleEstado.atualizarFormularioValido(formularioValido());
-                    }
-                } catch (Exception e) {
-                    atualizarBordaETooltip(campo, false, "Erro na validação do CEP");
-                } finally {
-                    carregando.dispose();
-                }
-            }
-        };
-
-        worker.execute();
-        carregando.setVisible(true);
+        // Para outros tipos, assume válido
+        return true;
     }
-
 }

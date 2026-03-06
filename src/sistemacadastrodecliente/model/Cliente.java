@@ -21,6 +21,7 @@ public class Cliente {
     private String telefone;
     private String endereco;
     private String numero;
+    private String bairro;
     private String cidade;
     private String uf;
     private String cep;
@@ -121,5 +122,15 @@ public class Cliente {
     public void setObservacao(String observacao) {
         this.observacao = observacao;
     }
+
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+   
 
 }

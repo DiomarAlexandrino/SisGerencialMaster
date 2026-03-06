@@ -11,9 +11,14 @@ import java.time.LocalDate;
  * @author diomar.alexandrino
  */
 public class ValidarIdade {
+    
     public static boolean validarIdade(LocalDate dataNascimento) {
+        return validarIdadeComMotivo(dataNascimento) == null;
+    }
+    
+    public static String validarIdadeComMotivo(LocalDate dataNascimento) {
         if (dataNascimento == null) {
-            return false; // Se não informar data, inválido
+            return "Data de nascimento não informada";
         }
 
         LocalDate hoje = LocalDate.now();
@@ -26,12 +31,18 @@ public class ValidarIdade {
             idade--;
         }
 
-        // Calcula limites de ano válidos
-        LocalDate dataMinima = hoje.minusYears(150); // idade máxima 150
-        LocalDate dataMaxima = hoje.minusYears(12);  // idade mínima 12
+        // Verifica idade mínima (12 anos)
+        if (idade < 12) {
+            return "Idade mínima de 12 anos não atingida (idade atual: " + idade + " anos)";
+        }
+        
+        // Verifica idade máxima (150 anos)
+        if (idade > 150) {
+            return "Idade máxima de 150 anos excedida (idade atual: " + idade + " anos)";
+        }
 
-        // Verifica se a data está dentro do intervalo permitido
-        return !dataNascimento.isBefore(dataMinima) && !dataNascimento.isAfter(dataMaxima);
+        return null; // idade válida
     }
-    
 }
+    
+

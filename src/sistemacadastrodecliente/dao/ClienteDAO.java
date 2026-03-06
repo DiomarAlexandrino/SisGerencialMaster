@@ -18,8 +18,8 @@ public class ClienteDAO {
         String sql = """
                   INSERT INTO clientes
                   (nome, cpf, data_nascimento, email, telefone,
-                   endereco, numero, cidade, uf, cep, observacao)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   endereco, numero, bairro, cidade, uf, cep, observacao)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   """;
 
         try (Connection conn = Conexao.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -32,10 +32,11 @@ public class ClienteDAO {
             ps.setString(5, cliente.getTelefone());
             ps.setString(6, cliente.getEndereco());
             ps.setString(7, cliente.getNumero());
-            ps.setString(8, cliente.getCidade());
-            ps.setString(9, cliente.getUf());
-            ps.setString(10, cliente.getCep());
-            ps.setString(11, cliente.getObservacao());
+            ps.setString(8, cliente.getBairro());
+            ps.setString(9, cliente.getCidade());
+            ps.setString(10, cliente.getUf());
+            ps.setString(11, cliente.getCep());
+            ps.setString(12, cliente.getObservacao());
 
             int linhasAfetadas = ps.executeUpdate();
             if (linhasAfetadas > 0) {
@@ -67,6 +68,7 @@ public class ClienteDAO {
                 c.setTelefone(rs.getString("telefone"));
                 c.setEndereco(rs.getString("endereco"));
                 c.setNumero(rs.getString("numero"));
+                c.setBairro(rs.getString("bairro"));
                 c.setCidade(rs.getString("cidade"));
                 c.setUf(rs.getString("uf"));
                 c.setCep(rs.getString("cep"));
@@ -111,6 +113,7 @@ public class ClienteDAO {
                 cliente.setTelefone(rs.getString("telefone"));
                 cliente.setEndereco(rs.getString("endereco"));
                 cliente.setNumero(rs.getString("numero"));
+                cliente.setBairro(rs.getString("bairro"));
                 cliente.setCidade(rs.getString("cidade"));
                 cliente.setUf(rs.getString("uf"));
                 cliente.setCep(rs.getString("cep"));
@@ -143,6 +146,7 @@ public class ClienteDAO {
                 c.setTelefone(rs.getString("telefone"));
                 c.setEndereco(rs.getString("endereco"));
                 c.setNumero(rs.getString("numero"));
+                c.setBairro(rs.getString("bairro"));
                 c.setCidade(rs.getString("cidade"));
                 c.setUf(rs.getString("uf"));
                 c.setCep(rs.getString("cep"));
@@ -168,7 +172,7 @@ public class ClienteDAO {
         String sql = """
                 UPDATE clientes SET 
                   nome = ?, cpf = ?, data_nascimento = ?, email = ?, telefone = ?,
-                  endereco = ?, numero = ?, cidade = ?, uf = ?, cep = ?, observacao = ?
+                  endereco = ?, numero = ?, bairro = ?, cidade = ?, uf = ?, cep = ?, observacao = ?
                 WHERE id = ?
                 """;
 
@@ -181,11 +185,12 @@ public class ClienteDAO {
             ps.setString(5, cliente.getTelefone());
             ps.setString(6, cliente.getEndereco());
             ps.setString(7, cliente.getNumero());
-            ps.setString(8, cliente.getCidade());
-            ps.setString(9, cliente.getUf());
-            ps.setString(10, cliente.getCep());
-            ps.setString(11, cliente.getObservacao());
-            ps.setInt(12, cliente.getId());
+            ps.setString(8, cliente.getBairro());
+            ps.setString(9, cliente.getCidade());
+            ps.setString(10, cliente.getUf());
+            ps.setString(11, cliente.getCep());
+            ps.setString(12, cliente.getObservacao());
+            ps.setInt(13, cliente.getId());
 
             int linhasAfetadas = ps.executeUpdate();
             if (linhasAfetadas > 0) {
@@ -232,7 +237,7 @@ public class ClienteDAO {
     // LISTAR CLIENTES
     public List<Cliente> listar() {
         List<Cliente> lista = new ArrayList<>();
-        String sql = "SELECT id, nome, cpf, telefone, email, numero,  data_nascimento, cidade, endereco, cep, uf, observacao FROM clientes";
+        String sql = "SELECT id, nome, cpf, telefone, email, numero, bairro, data_nascimento, cidade, endereco, cep, uf, observacao FROM clientes";
 
         try (Connection conn = Conexao.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
@@ -246,6 +251,7 @@ public class ClienteDAO {
                 c.setTelefone(rs.getString("telefone"));
                 c.setEndereco(rs.getString("endereco"));
                 c.setNumero(rs.getString("numero"));
+                c.setBairro(rs.getString("bairro"));
                 c.setCidade(rs.getString("cidade"));
                 c.setUf(rs.getString("uf"));
                 c.setCep(rs.getString("cep"));

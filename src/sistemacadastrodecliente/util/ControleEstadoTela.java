@@ -35,9 +35,7 @@ public class ControleEstadoTela {
         
     }
 
-    public ControleEstadoTela() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
+  
 
     public void setEstado(EstadoTela estado) {
         this.estadoAtual = estado;

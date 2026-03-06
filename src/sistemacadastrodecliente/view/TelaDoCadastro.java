@@ -22,10 +22,14 @@ import sistemacadastrodecliente.util.ControleEstadoTela;
 
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.AbstractDocument;
 import sistemacadastrodecliente.model.enums.EstadoTela;
-import sistemacadastrodecliente.util.DadosCEP;
 import sistemacadastrodecliente.util.ValidadorCEP;
+import sistemacadastrodecliente.util.ValidadorCEP.DadosCEP;
+import java.awt.event.ActionListener;
+import sistemacadastrodecliente.util.ComboBoxUF;
 
 public final class TelaDoCadastro extends JFrame {
 
@@ -35,10 +39,10 @@ public final class TelaDoCadastro extends JFrame {
     private JComboBox<TemaEnum> cbTema;
     private TemaEnum temaSelecionado = TemaEnum.CLARO;
 
-    private JTextField txtNome, txtEmail, txtEndereco, txtNumero, txtCidade, txtCpf, txtDataNascimento;
+    private JTextField txtNome, txtEmail, txtEndereco, txtNumero, txtCidade, txtBairro;
     private JFormattedTextField txtCPF, txtTelefone, txtCEP;
     private CampoDataComCalendario campoDataNascimento;
-    private JComboBox<UF> cbEstado;
+    private ComboBoxUF cbEstado;
     private JTextArea txtObservacao;
 
     private final Border bordaNeutra = BorderFactory.createLineBorder(Color.GRAY);
@@ -48,12 +52,19 @@ public final class TelaDoCadastro extends JFrame {
     private int idSelecionado = -1;
 
     private final ClienteDAO clienteDAO = new ClienteDAO();
-    private ValidadorFormulario validador;
+    private ValidadorFormulario validadorFormulario;
     private ControleEstadoTela controle = null;
     private int linhaModel;
     private int clienteId;
     private Cliente cliente;
     private JPanel painelFormulario;
+    private boolean atualizandoCEP = false;
+
+    private ValidadorCEP.DadosCEP ultimoCepBuscado;
+
+    ValidadorCEP.DadosCEP dados = null;
+    private JPanel painelAviso;
+    private JButton btnFecharAviso;
 
     public TelaDoCadastro() {
         inicializarTela();
@@ -64,8 +75,7 @@ public final class TelaDoCadastro extends JFrame {
                 btnEditar,
                 btnExcluir,
                 btnSalvar,
-                btnCancelar,
-                campoDataNascimento
+                btnCancelar
         );
 
         selecionandoClienteDaTabela();
@@ -74,46 +84,35 @@ public final class TelaDoCadastro extends JFrame {
 
         inicializarOuvintes();     // listeners depois
         carregarTabela();
-        txtCEP.getDocument().addDocumentListener(SimpleDocumentListener.of(() -> {
-            if (controle.getEstadoAtual() == EstadoTela.NAVEGANDO) {
-                return;
-            }
 
-            String cep = txtCEP.getText().replaceAll("\\D", "");
-            if (cep.length() != 8) {
-                return; // só quando completo
-            }
-            new Thread(() -> {
-                ValidadorCEP.DadosCEP dados = ValidadorCEP.buscarDados(cep);
-                if (dados == null) {
-                    return;
+        // Listener do CEP
+        txtCEP.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                if (!atualizandoCEP) {
+                    buscarCEP();
                 }
+            }
 
-                // 🔹 usar invokeLater para atualizar campos do Swing
-                SwingUtilities.invokeLater(() -> {
-                    if (dados.cidade != null && !dados.cidade.isBlank()) {
-                        txtCidade.setText(dados.cidade);
-                    }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                if (!atualizandoCEP) {
+                    buscarCEP();
+                }
+            }
 
-                    if (dados.uf != null && !dados.uf.isBlank()) {
-                        for (UF uf : UF.values()) {
-                            if (uf.getSigla().equalsIgnoreCase(dados.uf)) {
-                                cbEstado.setSelectedItem(uf);
-                                break;
-                            }
-                        }
-                    }
-
-                    txtCEP.setText(cep.replaceAll("(\\d{5})(\\d{3})", "$1-$2"));
-                });
-            }).start();
-        }));
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                if (!atualizandoCEP) {
+                    buscarCEP();
+                }
+            }
+        });
 
         limparCampos();
         setVisible(true);
 
         aplicarTemaSelecionado();
-
     }
 
     private JPanel criarPainelCliente() {
@@ -126,7 +125,7 @@ public final class TelaDoCadastro extends JFrame {
 
         // Nome
         c.gridx = 0;
-        c.gridy = 0;
+        c.gridy = 1;
         painel.add(new JLabel("Nome:"), c);
         c.gridx = 1;
         c.gridwidth = 3;
@@ -135,7 +134,7 @@ public final class TelaDoCadastro extends JFrame {
 
         // CPF
         c.gridx = 0;
-        c.gridy = 1;
+        c.gridy = 2;
         c.gridwidth = 1;
         painel.add(new JLabel("CPF:"), c);
         c.gridx = 1;
@@ -151,7 +150,7 @@ public final class TelaDoCadastro extends JFrame {
 
         // Email
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 3;
         c.gridwidth = 3;
         painel.add(new JLabel("E-mail:"), c);
         c.gridx = 1;
@@ -160,7 +159,7 @@ public final class TelaDoCadastro extends JFrame {
 
         // Telefone
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 4;
         c.gridwidth = 1;
         painel.add(new JLabel("Telefone:"), c);
         c.gridx = 1;
@@ -169,7 +168,7 @@ public final class TelaDoCadastro extends JFrame {
 
         // CEP
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 5;
         painel.add(new JLabel("CEP:"), c);
         c.gridx = 1;
         txtCEP = new JFormattedTextField(criarMascara("#####-###"));
@@ -184,11 +183,26 @@ public final class TelaDoCadastro extends JFrame {
 
         // Nº
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 6;
         painel.add(new JLabel("Nº:"), c);
         c.gridx = 1;
         txtNumero = new JTextField(10);
         painel.add(txtNumero, c);
+
+        // Bairro
+        c.gridx = 2;
+        painel.add(new JLabel("Bairro:"), c);
+        c.gridx = 3;
+        txtBairro = new JTextField(20);
+        painel.add(txtBairro, c);
+
+        // Estado
+        c.gridx = 0;
+        c.gridy = 7;
+        painel.add(new JLabel("Estado:"), c);
+        c.gridx = 1;
+        cbEstado = new ComboBoxUF();
+        painel.add(cbEstado, c);
 
         // Cidade
         c.gridx = 2;
@@ -196,15 +210,6 @@ public final class TelaDoCadastro extends JFrame {
         c.gridx = 3;
         txtCidade = new JTextField(20);
         painel.add(txtCidade, c);
-
-        // Estado
-        c.gridx = 0;
-        c.gridy = 6;
-        painel.add(new JLabel("Estado:"), c);
-        c.gridx = 1;
-        cbEstado = new JComboBox<>(UF.values());
-        cbEstado.setSelectedItem(UF.UF);
-        painel.add(cbEstado, c);
 
         return painel;
     }
@@ -220,13 +225,7 @@ public final class TelaDoCadastro extends JFrame {
         }
     }
 
-    private void inicializarTabelaEControle(JPanel painelFormulario,
-            JButton btnNovo,
-            JButton btnEditar,
-            JButton btnExcluir,
-            JButton btnSalvar,
-            JButton btnCancelar,
-            CampoDataComCalendario campoDataNascimento) {
+    private void inicializarTabelaEControle(JPanel painelFormulario, JButton btnNovo, JButton btnEditar, JButton btnExcluir, JButton btnSalvar, JButton btnCancelar) {
 
         // ============================
         // INICIALIZA MODELO E TABELA
@@ -304,198 +303,112 @@ public final class TelaDoCadastro extends JFrame {
     }
 
     private void inicializarOuvintes() {
-        // =================== CEP ===================
-txtCEP.addFocusListener(new FocusAdapter() {
-    @Override
-    public void focusLost(FocusEvent e) {
-        String cep = txtCEP.getText().replaceAll("\\D", "");
-        if (cep.length() != 8) return;
+        // Registrar campos no ValidadorFormulario
+        validadorFormulario.registrarCampo(txtNome, TipoValidacao.NOME_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtEmail, TipoValidacao.EMAIL);
+        validadorFormulario.registrarCampo(txtCPF, TipoValidacao.CPF);
+        validadorFormulario.registrarCampo(txtTelefone, TipoValidacao.TELEFONE);
+        validadorFormulario.registrarCampo(txtCEP, TipoValidacao.CEP);
+        validadorFormulario.registrarCampo(txtEndereco, TipoValidacao.ENDERECO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtBairro, TipoValidacao.BAIRRO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtCidade, TipoValidacao.CIDADE_OBRIGATORIA);
+        validadorFormulario.registrarCampo(cbEstado, TipoValidacao.COMBO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtNumero, TipoValidacao.NUMERO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(campoDataNascimento, TipoValidacao.DATA_OBRIGATORIA);
 
-        new Thread(() -> {
-            ValidadorCEP.DadosCEP dados = ValidadorCEP.buscarDados(cep);
-            if (dados == null) return;
-
-            SwingUtilities.invokeLater(() -> {
-                txtCidade.setText(dados.cidade);
-
-                for (UF uf : UF.values()) {
-                    if (uf.getSigla().equalsIgnoreCase(dados.uf)) {
-                        cbEstado.setSelectedItem(uf);
-                        break;
-                    }
-                }
-            });
-        }).start();
-    }
-});
-
-
-
-        // =================== Cidade ===================
-        txtCidade.addFocusListener(new FocusAdapter() {
+        // =============================
+        // Listener especial para CEP
+        // =============================
+        txtCEP.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                // 🚫 Se estiver navegando, não valida nada
-                if (controle.getEstadoAtual() == EstadoTela.NAVEGANDO) {
-                    return;
-                }
-
-                String cidade = txtCidade.getText().trim();
-
-                if (cidade.isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Cidade é obrigatória");
-                    txtCidade.requestFocus();
-                } else if (!cidade.matches("[A-Za-zÀ-ÿ ]+")) {
-                    JOptionPane.showMessageDialog(null, "Cidade inválida (somente letras e espaços)");
-                    txtCidade.requestFocus();
-                } else if (cidade.length() < 2 || cidade.length() > 50) {
-                    JOptionPane.showMessageDialog(null, "Cidade deve ter entre 2 e 50 caracteres");
-                    txtCidade.requestFocus();
-                } else {
-                    // ✅ Se a cidade estiver válida, revalida CEP
-                    revalidarCEP();
-                }
-            }
-
-            private void revalidarCEP() {
-                // 🚫 Se estiver navegando, não valida nada
-                if (controle.getEstadoAtual() == EstadoTela.NAVEGANDO) {
-                    return;
-                }
-
-                String cep = txtCEP.getText().replaceAll("\\D", ""); // pega só números
+                String cep = txtCEP.getText().replaceAll("\\D", "");
                 if (cep.length() != 8) {
-                    return; // só valida se o CEP estiver completo
+                    return; // popup de CEP inválido já é mostrado pelo ValidadorFormulario
                 }
-                String cidade = txtCidade.getText().trim();
-                UF ufSelecionado = (UF) cbEstado.getSelectedItem();
-                String uf = ufSelecionado != null ? ufSelecionado.getSigla() : "";
 
-                // Thread separada para não travar a UI
+                reiniciarCamposEndereco(); // limpa cidade, bairro, estado etc.
+
+                // Busca assíncrona do CEP
                 new Thread(() -> {
-                    // Busca dados da cidade/UF pelo CEP usando seu ValidadorCEP
-                    ValidadorCEP.DadosCEP dados = ValidadorCEP.buscarDados(cep); // você precisa implementar esse método se não existir
-                    if (dados != null) {
-                        SwingUtilities.invokeLater(() -> {
-                            // Preenche cidade se não estiver vazio
-                            if (dados.cidade != null && !dados.cidade.isBlank()) {
-                                txtCidade.setText(dados.cidade);
-                            }
-                            // Preenche estado se não estiver vazio
-                            if (dados.uf != null && !dados.uf.isBlank()) {
-                                for (UF ufValue : UF.values()) {
-                                    if (ufValue.getSigla().equalsIgnoreCase(dados.uf)) {
-                                        cbEstado.setSelectedItem(ufValue);
-                                        break;
-                                    }
-                                }
-                            }
-                            // Formata CEP para exibição
-                            txtCEP.setText(cep.replaceAll("(\\d{5})(\\d{3})", "$1-$2"));
+                    ValidadorCEP.DadosCEP dados = ValidadorCEP.buscarDados(cep);
 
-                            // Valida CEP com cidade e UF
-                            if (!ValidadorCEP.validar(cep, txtCidade.getText().trim(),
-                                    ((UF) cbEstado.getSelectedItem()).getSigla())) {
-                                JOptionPane.showMessageDialog(null,
-                                        "CEP inválido para a cidade/estado informados");
-                            }
-                        });
+                    if (dados != null) {
+                        ultimoCepBuscado = dados;
                     }
+
+                    SwingUtilities.invokeLater(() -> {
+                        if (dados != null) {
+                            preencherCamposEndereco(dados);
+                        } else {
+                            // mostra popup usando ValidadorFormulario
+                            validadorFormulario.mostrarPopupAviso(
+                                    "Não foi possível localizar o CEP informado.", txtCEP
+                            );
+                        }
+                    });
                 }).start();
             }
-
         });
+    }
 
-        // =========================
-        // BOTÃO NOVO
-        // =========================
-        btnNovo.addActionListener(e -> {
-            idSelecionado = -1;
-            limparCampos();
-            controle.setEstado(EstadoTela.ADICIONANDO);
-            campoDataNascimento.setEnabledCampo(true);
-        });
+    /**
+     * Preenche os campos de endereço com os dados retornados do CEP.
+     */
+    private void preencherCamposEndereco(DadosCEP dados) {
+        if (dados == null) {
+            return;
+        }
 
-        // =========================
-        // BOTÃO EDITAR
-        // =========================
-        btnEditar.addActionListener(e -> {
-            int linhaSelecionada = tabelaClientes.getSelectedRow();
-            if (linhaSelecionada != -1) {
-                // Converter para índice do modelo
-                int linhaModelo = tabelaClientes.convertRowIndexToModel(linhaSelecionada);
-                Object idObj = modelTabela.getValueAt(linhaModelo, 0);
+        // Logradouro
+        if (dados.logradouro != null && !dados.logradouro.isBlank()) {
+            txtEndereco.setText(dados.logradouro);
+            txtEndereco.setEnabled(false);
+        } else {
+            txtEndereco.setText("");
+            txtEndereco.setEnabled(true);
+        }
 
-                if (idObj != null) {
-                    try {
-                        idSelecionado = Integer.parseInt(idObj.toString());
-                        carregarClienteSelecionado();
-                        controle.setEstado(EstadoTela.EDITANDO);
-                        campoDataNascimento.setEnabledCampo(true);
-                    } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(this, "Erro ao obter ID do cliente: " + ex.getMessage());
-                    }
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "Selecione um cliente para editar!");
-            }
-        });
+        // Bairro
+        if (dados.bairro != null && !dados.bairro.isBlank()) {
+            txtBairro.setText(dados.bairro);
+            txtBairro.setEnabled(false);
+        } else {
+            txtBairro.setText("");
+            txtBairro.setEnabled(true);
+        }
 
-        // =========================
-        // BOTÃO CANCELAR
-        // =========================
-        btnCancelar.addActionListener(e -> {
-            controle.setEstado(EstadoTela.NAVEGANDO);
-            campoDataNascimento.setEnabledCampo(false);
-            campoDataNascimento.setBorder(bordaNeutra);
-        });
+        // Cidade
+        if (dados.cidade != null && !dados.cidade.isBlank()) {
+            txtCidade.setText(dados.cidade);
+            txtCidade.setEnabled(false);
+        } else {
+            txtCidade.setText("");
+            txtCidade.setEnabled(true);
+        }
 
-        // =========================
-        // PROTEÇÃO DA TABELA (não clicável se desabilitada)
-        // =========================
-        tabelaClientes.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                if (!tabelaClientes.isEnabled()) {
-                    e.consume();
+        // UF
+        if (dados.uf != null && !dados.uf.isBlank()) {
+            for (UF ufEnum : UF.values()) {
+                if (ufEnum.getSigla().equalsIgnoreCase(dados.uf)) {
+                    cbEstado.setSelectedItem(ufEnum);
+                    cbEstado.setEnabled(false);
+                    break;
                 }
             }
-        });
+        } else {
+            cbEstado.setSelectedItem(UF.UF);
+            cbEstado.setEnabled(true);
+        }
 
-        // =========================
-        // VALIDAÇÃO DO COMBO
-        // =========================
-        cbEstado.addActionListener(e -> validador.validarCampo(cbEstado));
+        // Formatar CEP
+        String cepNumeros = txtCEP.getText().replaceAll("\\D", "");
+        if (cepNumeros.length() == 8) {
+            txtCEP.setText(cepNumeros.replaceAll("(\\d{5})(\\d{3})", "$1-$2"));
+        }
 
-        // No método inicializarOuvintes()
-        txtCidade.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (!txtCidade.isEnabled()) {
-                    return;
-                }
-
-                EstadoTela estado = controle.getEstadoAtual();
-                if (estado != EstadoTela.ADICIONANDO && estado != EstadoTela.EDITANDO) {
-                    return;
-                }
-
-                // 🔹 valida cidade
-                validador.validarCampo(txtCidade);
-
-                // 🔹 valida estado
-                validador.validarCampo(cbEstado);
-
-                // 🔹 valida CEP
-                validador.validarCampo(txtCEP);
-
-                // 🔹 força rechecagem de habilitação do botão Salvar
-                controle.atualizarFormularioValido(rootPaneCheckingEnabled);
-            }
-        });
-
-        cbEstado.addActionListener(e -> validador.revalidarCEP());
-
+        // Focar no número
+        txtNumero.requestFocusInWindow();
     }
 
     private void aplicarTemaSelecionado() {
@@ -510,33 +423,36 @@ txtCEP.addFocusListener(new FocusAdapter() {
             campoDataNascimento.aplicarTema(temaSelecionado);
         }
 
-        Tema.aplicarTemaCombo(cbEstado, temaSelecionado);
-        cbEstado.repaint();
+        if (cbEstado != null) {
+            cbEstado.aplicarTema(temaSelecionado);
+        }
     }
 
     private void inicializarValidacoes() {
 
-        validador = new ValidadorFormulario(this);
-        validador.setControle(this.controle);
+        validadorFormulario = new ValidadorFormulario(this);
+        validadorFormulario.setControle(this.controle);
 
         // =====================
         // Campos obrigatórios
         // =====================
-        validador.registrarCampo(txtNome, TipoValidacao.NOME_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtNome, TipoValidacao.NOME_OBRIGATORIO);
 
-        validador.registrarCampo(txtEndereco, TipoValidacao.ENDERECO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtEndereco, TipoValidacao.ENDERECO_OBRIGATORIO);
 
-        validador.registrarCampo(txtNumero, TipoValidacao.NUMERO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(txtBairro, TipoValidacao.BAIRRO_OBRIGATORIO);
 
-        validador.registrarCampo(txtEmail, TipoValidacao.EMAIL);
+        validadorFormulario.registrarCampo(txtNumero, TipoValidacao.NUMERO_OBRIGATORIO);
 
-        validador.registrarCampo(txtCPF, TipoValidacao.CPF);
-        validador.registrarCampo(txtTelefone, TipoValidacao.TELEFONE);
+        validadorFormulario.registrarCampo(txtEmail, TipoValidacao.EMAIL);
 
-        validador.registrarCampo(txtCEP, TipoValidacao.CEP);
+        validadorFormulario.registrarCampo(txtCPF, TipoValidacao.CPF);
+        validadorFormulario.registrarCampo(txtTelefone, TipoValidacao.TELEFONE);
 
-        validador.registrarCampo(cbEstado, TipoValidacao.COMBO_OBRIGATORIO);
-        validador.registrarCampo(campoDataNascimento, TipoValidacao.DATA_OBRIGATORIA);
+        validadorFormulario.registrarCampo(txtCEP, TipoValidacao.CEP);
+
+        validadorFormulario.registrarCampo(cbEstado, TipoValidacao.COMBO_OBRIGATORIO);
+        validadorFormulario.registrarCampo(campoDataNascimento, TipoValidacao.DATA_OBRIGATORIA);
 
         // =====================
         // Revalidação automática do CEP
@@ -545,15 +461,16 @@ txtCEP.addFocusListener(new FocusAdapter() {
         txtCidade.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                validador.revalidarCEP();
+                validadorFormulario.revalidarCEP();
             }
         });
-        validador.registrarCampo(txtCidade, TipoValidacao.CIDADE_OBRIGATORIA);
+        validadorFormulario.registrarCampo(txtCidade, TipoValidacao.CIDADE_OBRIGATORIA);
         // Quando o estado (UF) for alterado
-        cbEstado.addActionListener(e -> validador.revalidarCEP());
+        cbEstado.addActionListener(e -> validadorFormulario.revalidarCEP());
     }
 
     void carregarTabela() {
+
         modelTabela.setRowCount(0);
         List<Cliente> clientes = clienteDAO.listar();
 
@@ -627,12 +544,13 @@ txtCEP.addFocusListener(new FocusAdapter() {
 
             txtEndereco.setText(c.getEndereco() != null ? c.getEndereco() : "");
             txtNumero.setText(c.getNumero() != null ? c.getNumero() : "");
+            txtBairro.setText(c.getBairro() != null ? c.getBairro() : "");
             txtCidade.setText(c.getCidade() != null ? c.getCidade() : "");
 
             // Estado
             if (c.getUf() != null && !c.getUf().isEmpty() && !c.getUf().equalsIgnoreCase("UF")) {
                 try {
-                    cbEstado.setSelectedItem(UF.valueOf(c.getUf()));
+                    cbEstado.setSelectedUF(c.getUf());
                 } catch (IllegalArgumentException e) {
                     // Se não encontrar o estado, tenta buscar pela sigla
                     boolean encontrado = false;
@@ -650,7 +568,11 @@ txtCEP.addFocusListener(new FocusAdapter() {
             } else {
                 cbEstado.setSelectedItem(UF.UF);
             }
-
+            
+              cbEstado.setEnabled(false);  // Desabilitado no modo navegação
+              cbEstado.aplicarTema(temaSelecionado); 
+             
+             
             txtObservacao.setText(c.getObservacao() != null ? c.getObservacao() : "");
 
             // Forçar atualização da interface
@@ -662,6 +584,8 @@ txtCEP.addFocusListener(new FocusAdapter() {
 
             System.out.println("✅ Campos preenchidos para cliente ID: " + clienteId + " - " + c.getNome());
         });
+
+        atualizarTemaComboEstado();
     }
 
     void limparCampos() {
@@ -690,6 +614,9 @@ txtCEP.addFocusListener(new FocusAdapter() {
         txtEndereco.setText("");
         txtEndereco.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         txtEndereco.setToolTipText(null);
+        txtBairro.setText("");
+        txtBairro.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        txtBairro.setToolTipText(null);
         txtNumero.setText("");
         txtNumero.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         txtNumero.setToolTipText(null);
@@ -697,22 +624,20 @@ txtCEP.addFocusListener(new FocusAdapter() {
         txtCidade.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         txtCidade.setToolTipText(null);
         cbEstado.setSelectedItem(UF.UF);
-        cbEstado.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        cbEstado.setToolTipText(null);
+        cbEstado.setEnabled(false);  // Desabilitado no modo navegação
+        cbEstado.aplicarTema(temaSelecionado);  // Forçar tema
         txtObservacao.setText("");
 
         tabelaClientes.clearSelection();
 
-        aplicarTemaSelecionado();
+       
+        
 
     }
 
     private Cliente RegistrarClientedoFormulario() {
 
-        // FORÇA validação da cidade
-        validador.validarCampo(txtCidade);
-
-        if (!validador.formularioValido()) {
+        if (!validadorFormulario.formularioValido()) {
             JOptionPane.showMessageDialog(this, "Preencha corretamente os campos destacados em vermelho.");
             return null;
         }
@@ -724,6 +649,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
         c.setEmail(txtEmail.getText().trim());
         c.setTelefone(txtTelefone.getText().replaceAll("[^0-9]", ""));
         c.setEndereco(txtEndereco.getText().trim());
+        c.setBairro(txtBairro.getText().trim());
         c.setNumero(txtNumero.getText().trim());
         c.setCidade(txtCidade.getText().trim());
         c.setUf(((UF) cbEstado.getSelectedItem()).getSigla());
@@ -751,6 +677,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
 
         // Converter índice da view para o model
         // SEMPRE usar o MODEL
+        int linhaModel = tabelaClientes.convertRowIndexToModel(linha);
         idSelecionado = (int) modelTabela.getValueAt(linhaModel, 0);
         String cpf = modelTabela.getValueAt(linhaModel, 2).toString();
 
@@ -761,15 +688,19 @@ txtCEP.addFocusListener(new FocusAdapter() {
 
         txtNome.setText(c.getNome());
         txtCPF.setText(c.getCpf());
+
         campoDataNascimento.setDate(c.getDataNascimento());
+        campoDataNascimento.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         txtEmail.setText(c.getEmail());
         txtTelefone.setText(c.getTelefone());
         txtCEP.setText(c.getCep());
         txtEndereco.setText(c.getEndereco());
+        txtBairro.setText(c.getBairro());
         txtNumero.setText(c.getNumero());
         txtCidade.setText(c.getCidade());
         cbEstado.setSelectedItem(UF.valueOf(c.getUf()));
         txtObservacao.setText(c.getObservacao());
+        atualizarTemaComboEstado();
     }
 
     private void inicializarTela() {
@@ -828,6 +759,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
         painelCentral.add(painelBotoes, BorderLayout.SOUTH);
 
         add(painelCentral, BorderLayout.CENTER);
+
     }
 
     private void acaoNovo() {
@@ -835,16 +767,37 @@ txtCEP.addFocusListener(new FocusAdapter() {
         limparCampos();
 
         // Prepara para adicionar novo cliente
-        clienteId = -1; // Nenhum cliente selecionado
-        campoDataNascimento.setEnabledCampo(true); // habilita o campo de data
-        tabelaClientes.clearSelection(); // desmarca qualquer seleção na tabela
+        clienteId = -1; // Nenhum cliente selecionadobusca
+
+        // MUDA O ESTADO PARA INSERINDO (isso habilita os campos)
+        controle.setEstado(EstadoTela.ADICIONANDO);
+
+        // Habilita explicitamente os campos que podem estar desabilitados
+        campoDataNascimento.setEnabledCampo(true);
+
+        // Habilita campos de endereço (caso estejam desabilitados por busca de CEP)
+        txtEndereco.setEnabled(true);
+        txtBairro.setEnabled(true);
+        txtCidade.setEnabled(true);
+        cbEstado.setEnabled(true);
+
+        // Desmarca qualquer seleção na tabela
+        tabelaClientes.clearSelection();
+
+        // Dá foco ao primeiro campo
+        txtNome.requestFocusInWindow();
+
+        campoDataNascimento.setOnChange(() -> {
+            boolean valido = validadorFormulario.validarCampoSemPopup(campoDataNascimento);
+            controle.atualizarFormularioValido(valido);
+        });
 
         aplicarTemaSelecionado();
-
     }
 
     private void acaoCancelar() {
-        limparCampos();
+
+        SwingUtilities.invokeLater(() -> limparCampos());
 
         campoDataNascimento.setEnabledCampo(false);
         controle.setEstado(EstadoTela.NAVEGANDO);
@@ -860,7 +813,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
     }
 
     private void salvarCliente() {
-        Cliente cliente = controller.getClienteFromFields(this);
+        cliente = controller.getClienteFromFields(this);
         if (cliente == null) {
             return;
         }
@@ -882,6 +835,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
                         "Atualização",
                         JOptionPane.INFORMATION_MESSAGE
                 );
+
             }
 
             clienteId = -1; // 🔥 ESSENCIAL
@@ -900,9 +854,47 @@ txtCEP.addFocusListener(new FocusAdapter() {
         }
     }
 
+    public void bloquearCidadeEstado(boolean bloquear) {
+        txtCidade.setEnabled(!bloquear);
+        cbEstado.setEnabled(!bloquear);
+    }
+
+    public void reiniciarCamposEndereco() {
+        // Limpa o texto
+        txtEndereco.setText("");
+        txtBairro.setText("");
+        txtCidade.setText("");
+        cbEstado.setSelectedItem(UF.UF); // Ou o seu valor padrão
+
+        // Reativa os campos
+        txtEndereco.setEnabled(true);
+        txtBairro.setEnabled(true);
+        txtCidade.setEnabled(true);
+        cbEstado.setEnabled(true);
+
+    }
+
+    /**
+     * Método para forçar a atualização do tema do ComboBox de estado
+     */
+    private void atualizarTemaComboEstado() {
+        if (cbEstado != null && temaSelecionado != null) {
+            SwingUtilities.invokeLater(() -> {
+                Tema.aplicarTemaCombo(cbEstado, temaSelecionado);
+
+                // Truque adicional: forçar redesenho
+                cbEstado.revalidate();
+                cbEstado.repaint();
+
+                // Forçar atualização do LookAndFeel para este componente
+                cbEstado.updateUI();
+            });
+        }
+    }
+
     // Adicione estes getters na classe TelaDoCadastro:
     public ValidadorFormulario getValidador() {
-        return validador;
+        return validadorFormulario;
     }
 
     public int getClienteId() {
@@ -947,6 +939,73 @@ txtCEP.addFocusListener(new FocusAdapter() {
             clienteId = -1;
             controle.setEstado(EstadoTela.NAVEGANDO);
         }
+    }
+
+    private void buscarCEP() {
+
+        if (controle.getEstadoAtual() == EstadoTela.NAVEGANDO) {
+            return;
+        }
+
+        if (atualizandoCEP) {
+            return;
+        }
+
+        String cep = txtCEP.getText().replaceAll("\\D", "");
+        if (cep.length() != 8) {
+            return;
+        }
+
+        SwingWorker<DadosCEP, Void> worker = new SwingWorker<>() {
+            @Override
+            protected DadosCEP doInBackground() throws Exception {
+                return ValidadorCEP.buscarDados(cep); // ← Faltava o ponto e vírgula
+            } // ← Faltava fechar o método
+
+            @Override
+            protected void done() { // ← Faltava o 'protected'
+                try {
+                    DadosCEP dados = get();
+
+                    if (dados != null) {
+                        atualizandoCEP = true;
+                        preencherCamposEndereco(dados);
+
+                        // Mostrar popup de sucesso
+                        String mensagem = String.format(
+                                "<html>✅ CEP encontrado!<br>%s, %s<br>%s - %s</html>",
+                                dados.logradouro != null ? dados.logradouro : "Logradouro não informado",
+                                dados.bairro != null ? dados.bairro : "Bairro não informado",
+                                dados.cidade != null ? dados.cidade : "Cidade não informada",
+                                dados.uf != null ? dados.uf : "UF não informada"
+                        );
+
+                        validadorFormulario.mostrarPopupAviso(mensagem, txtCEP);
+
+                        atualizandoCEP = false;
+                    } else {
+                        reiniciarCamposEndereco();
+
+                        // Mostrar popup de erro
+                        validadorFormulario.mostrarPopupAviso(
+                                "❌ CEP não encontrado. Verifique o número digitado.",
+                                txtCEP
+                        );
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    validadorFormulario.mostrarPopupAviso(
+                            "❌ Erro ao buscar CEP: " + e.getMessage(),
+                            txtCEP
+                    );
+                } finally {
+                    atualizandoCEP = false; // Garante que a flag seja resetada mesmo em caso de erro
+                }
+            }
+        };
+
+        worker.execute();
     }
 
     public ControleDoCadastro getController() {
@@ -1053,22 +1112,6 @@ txtCEP.addFocusListener(new FocusAdapter() {
         this.txtCidade = txtCidade;
     }
 
-    public JTextField getTxtCpf() {
-        return txtCpf;
-    }
-
-    public void setTxtCpf(JTextField txtCpf) {
-        this.txtCpf = txtCpf;
-    }
-
-    public JTextField getTxtDataNascimento() {
-        return txtDataNascimento;
-    }
-
-    public void setTxtDataNascimento(JTextField txtDataNascimento) {
-        this.txtDataNascimento = txtDataNascimento;
-    }
-
     public JFormattedTextField getTxtCPF() {
         return txtCPF;
     }
@@ -1105,7 +1148,7 @@ txtCEP.addFocusListener(new FocusAdapter() {
         return cbEstado;
     }
 
-    public void setCbEstado(JComboBox<UF> cbEstado) {
+    public void setCbEstado(ComboBoxUF cbEstado) {
         this.cbEstado = cbEstado;
     }
 
@@ -1196,6 +1239,22 @@ txtCEP.addFocusListener(new FocusAdapter() {
 
     public void setEstadoAtual(EstadoTela novoEstado) {
         this.estadoAtual = novoEstado;
+    }
+
+    public ValidadorCEP.DadosCEP getUltimoCepBuscado() {
+        return ultimoCepBuscado;
+    }
+
+    public void setUltimoCepBuscado(ValidadorCEP.DadosCEP dados) {
+        this.ultimoCepBuscado = dados;
+    }
+
+    public JTextField getTxtBairro() {
+        return txtBairro;
+    }
+
+    public void setTxtBairro(JTextField txtBairro) {
+        this.txtBairro = txtBairro;
     }
 
 }

@@ -232,6 +232,7 @@ public class ControleDoCadastro {
 
         // Endereço, número, cidade
         cliente.setEndereco(tela.getTxtEndereco().getText().trim());
+        cliente.setBairro(tela.getTxtBairro().getText().trim());
         cliente.setNumero(tela.getTxtNumero().getText().trim());
         cliente.setCidade(tela.getTxtCidade().getText().trim());
 

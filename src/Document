@@ -1,0 +1,504 @@
+1. Visão Geral do Sistema
+
+O sistema é uma aplicação desktop desenvolvida em Java utilizando Swing, responsável pelo gerenciamento de clientes.
+
+Ele permite realizar as seguintes operações:
+
+Cadastro de clientes
+
+Edição de clientes
+
+Exclusão de clientes
+
+Consulta de clientes em tabela
+
+Validação automática de campos
+
+Busca automática de endereço via CEP
+
+Alternância de tema visual
+
+O sistema foi estruturado com uma arquitetura inspirada no padrão MVC (Model-View-Controller).
+
+2. Arquitetura do Sistema
+
+A aplicação é organizada nas seguintes camadas:
+
+VIEW
+│
+├── TelaDoCadastro
+│
+CONTROLLER
+│
+├── ControleDoCadastro
+├── ControleEstadoTela
+│
+MODEL
+│
+├── Cliente
+│
+DAO
+│
+├── ClienteDAO
+│
+VALIDAÇÃO
+│
+├── ValidadorFormulario
+├── TipoValidacao
+├── ValidadorCEP
+│
+UTILIDADES
+│
+├── Tema
+├── TemaEnum
+├── CampoDataComCalendario
+├── ComboBoxUF
+├── UF
+│
+ENUMS
+│
+├── EstadoTela
+3. Model
+Classe: Cliente
+
+Representa a entidade Cliente dentro do sistema.
+
+Atributos
+Campo	Tipo
+id	int
+nome	String
+cpf	String
+dataNascimento	Date
+email	String
+telefone	String
+cep	String
+endereco	String
+numero	String
+bairro	String
+cidade	String
+uf	String
+observacao	String
+Responsabilidade
+
+Representar dados do cliente
+
+Transportar dados entre camadas
+
+4. DAO (Data Access Object)
+Classe: ClienteDAO
+
+Responsável por acesso e manipulação de dados no banco.
+
+Métodos principais
+Método	Função
+listar()	Retorna todos os clientes
+buscarPorId(id)	Busca cliente por ID
+buscarPorCpf(cpf)	Busca cliente por CPF
+salvar(cliente)	Insere cliente
+atualizar(cliente)	Atualiza cliente
+excluir(id)	Remove cliente
+Responsabilidades
+
+Executar SQL
+
+Mapear dados do banco para objetos Java
+
+Isolar a camada de persistência
+
+5. Controller
+Classe: ControleDoCadastro
+
+Responsável por intermediar a comunicação entre View e DAO.
+
+Métodos principais
+Método	Função
+salvarCliente()	Salva cliente
+editarCliente()	Prepara edição
+excluirCliente()	Remove cliente
+getClienteFromFields()	Monta objeto cliente a partir da tela
+Responsabilidade
+
+Aplicar regras de negócio
+
+Chamar DAO
+
+Controlar fluxo de operações
+
+Classe: ControleEstadoTela
+
+Gerencia o estado da interface.
+
+Estados possíveis
+
+Representados pelo enum:
+
+EstadoTela
+
+Estado	Descrição
+NAVEGANDO	Usuário apenas visualiza
+ADICIONANDO	Inserindo novo cliente
+EDITANDO	Editando cliente existente
+Controle de interface
+
+Esse controle altera:
+
+Habilitação de campos
+
+Habilitação de botões
+
+Seleção da tabela
+
+6. View
+Classe: TelaDoCadastro
+
+É a interface principal do sistema.
+
+Extende:
+
+JFrame
+Componentes principais
+Campos
+
+Nome
+
+CPF
+
+Data nascimento
+
+Email
+
+Telefone
+
+CEP
+
+Endereço
+
+Número
+
+Bairro
+
+Cidade
+
+Estado
+
+Observação
+
+Tabela
+
+Exibe clientes cadastrados.
+
+Colunas:
+
+Nome
+
+CPF
+
+Telefone
+
+Cidade
+
+O ID é mantido oculto.
+
+Botões
+Botão	Função
+Novo	Inicia cadastro
+Editar	Edita cliente
+Excluir	Remove cliente
+Salvar	Persiste dados
+Cancelar	Cancela operação
+7. Sistema de Validação
+Classe: ValidadorFormulario
+
+Responsável por validar campos do formulário.
+
+Funcionalidades
+
+Validação em tempo real
+
+Marcação visual de erro
+
+Tooltips informativos
+
+Controle de formulário válido
+
+Métodos importantes
+Método	Função
+registrarCampo()	Registra campo para validação
+validarCampoSemPopup()	Validação silenciosa
+formularioValido()	Verifica se todos campos são válidos
+mostrarPopupAviso()	Exibe mensagem de erro
+Enum: TipoValidacao
+
+Define o tipo de validação de cada campo.
+
+Tipos disponíveis:
+
+NOME_OBRIGATORIO
+
+EMAIL
+
+CPF
+
+TELEFONE
+
+CEP
+
+ENDERECO_OBRIGATORIO
+
+BAIRRO_OBRIGATORIO
+
+CIDADE_OBRIGATORIA
+
+NUMERO_OBRIGATORIO
+
+DATA_OBRIGATORIA
+
+COMBO_OBRIGATORIO
+
+8. Busca de CEP
+Classe: ValidadorCEP
+
+Responsável por buscar dados de endereço a partir do CEP.
+
+Estrutura de retorno
+
+Classe interna:
+
+DadosCEP
+
+Campos:
+
+Campo	Tipo
+logradouro	String
+bairro	String
+cidade	String
+uf	String
+Fluxo de busca
+
+Usuário digita CEP
+
+Sistema remove caracteres especiais
+
+CEP é validado
+
+Busca via API
+
+Retorno preenchendo campos de endereço
+
+Execução assíncrona
+
+Utiliza:
+
+SwingWorker
+
+para evitar travamento da interface.
+
+9. Componentes Personalizados
+CampoDataComCalendario
+
+Componente customizado para seleção de datas.
+
+Funcionalidades:
+
+calendário popup
+
+validação de data
+
+integração com tema visual
+
+ComboBoxUF
+
+ComboBox personalizado para seleção de estados.
+
+Utiliza enum:
+
+UF
+Enum UF
+
+Lista todos os estados brasileiros.
+
+Exemplo:
+
+AC
+AL
+AP
+AM
+BA
+...
+PR
+SC
+RS
+SP
+RJ
+
+Cada estado possui:
+
+nome
+
+sigla
+
+10. Sistema de Tema
+Classe: Tema
+
+Responsável por aplicar temas visuais na interface.
+
+Funcionalidades
+
+Alterar cores de fundo
+
+Alterar cores de texto
+
+Atualizar componentes
+
+Aplicar tema em ComboBox
+
+Aplicar tema em tabelas
+
+Enum: TemaEnum
+
+Define os temas disponíveis.
+
+Exemplo:
+
+Tema
+CLARO
+ESCURO
+
+Cada tema define:
+
+background
+
+foreground
+
+cores secundárias
+
+11. Fluxo de Cadastro de Cliente
+Usuário clica em Novo
+        ↓
+Tela entra no estado ADICIONANDO
+        ↓
+Usuário preenche campos
+        ↓
+ValidadorFormulario verifica dados
+        ↓
+Usuário clica em Salvar
+        ↓
+ControleDoCadastro cria objeto Cliente
+        ↓
+ClienteDAO salva no banco
+        ↓
+Tabela é atualizada
+12. Fluxo de Busca de Cliente
+Usuário seleciona linha na tabela
+        ↓
+ID é recuperado
+        ↓
+ClienteDAO busca cliente
+        ↓
+Tela preenche campos
+13. Fluxo de Edição
+Selecionar cliente
+        ↓
+Clicar Editar
+        ↓
+Estado EDITANDO
+        ↓
+Alterar campos
+        ↓
+Salvar
+        ↓
+ClienteDAO atualizar()
+14. Fluxo de Exclusão
+Selecionar cliente
+        ↓
+Clicar Excluir
+        ↓
+Confirmação
+        ↓
+ClienteDAO excluir()
+        ↓
+Atualizar tabela
+15. Tecnologias Utilizadas
+Tecnologia	Uso
+Java	Linguagem
+Swing	Interface gráfica
+JDBC	Comunicação com banco
+MaskFormatter	Máscaras de campos
+SwingWorker	Execução assíncrona
+GridBagLayout	Layout avançado
+MVC Pattern	Organização do código
+16. Estrutura de Pacotes Recomendada
+br.com.cadastro
+
+├── model
+│   └── Cliente.java
+│
+├── dao
+│   └── ClienteDAO.java
+│
+├── controller
+│   ├── ControleDoCadastro.java
+│   └── ControleEstadoTela.java
+│
+├── view
+│   └── TelaDoCadastro.java
+│
+├── validation
+│   ├── ValidadorFormulario.java
+│   ├── ValidadorCEP.java
+│   └── TipoValidacao.java
+│
+├── enums
+│   ├── EstadoTela.java
+│   ├── TemaEnum.java
+│   └── UF.java
+│
+├── components
+│   ├── CampoDataComCalendario.java
+│   └── ComboBoxUF.java
+│
+└── util
+    └── Tema.java
+17. Melhorias Futuras
+
+Possíveis melhorias:
+
+Funcionalidades
+
+Pesquisa de clientes
+
+Ordenação avançada da tabela
+
+Exportação para Excel
+
+Exportação para PDF
+
+Histórico de alterações
+
+Login de usuários
+
+Técnicas
+
+Migração para JavaFX
+
+Uso de JPA/Hibernate
+
+REST API
+
+Versão Web
+
+18. Conclusão
+
+O sistema implementa um cadastro completo de clientes com validação avançada e boa separação de responsabilidades, utilizando:
+
+padrão MVC
+
+DAO para persistência
+
+validação centralizada
+
+interface Swing responsiva
+
+integração com API de CEP
+
+suporte a temas visuais.
