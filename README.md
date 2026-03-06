@@ -327,4 +327,4 @@ Projeto desenvolvido por Diomar ALexanrino usando as tecnologias abaixo :
 * **Java Swing**
 * **Arquitetura MVC**
 * **Integração com PostgreSQL**
-* **Boas práticas de desenvolvimento**
+
