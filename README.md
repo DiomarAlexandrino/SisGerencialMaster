@@ -14,7 +14,8 @@ O sistema implementa o padrão **CRUD (Create, Read, Update e Delete)** permitin
 
 # 📸 Preview da Aplicação
 
-<img width="1696" height="962" alt="image" src="https://github.com/user-attachments/assets/c0f05650-1b46-4798-b675-624b23ddce2a" />
+<img width="1641" height="891" alt="image" src="https://github.com/user-attachments/assets/47399d29-1dd0-4d32-8857-c8e72c292744" />
+
 
 
 ```
