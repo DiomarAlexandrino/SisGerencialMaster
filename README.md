@@ -1,170 +1,78 @@
-
 # SisGerencialMaster
 
+![Java](https://img.shields.io/badge/Java-17-orange)
+![Swing](https://img.shields.io/badge/Java-Swing-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791)
+![MVC](https://img.shields.io/badge/Architecture-MVC-green)
+![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow)
+
+Sistema desktop desenvolvido em **Java Swing** para **cadastro e gerenciamento de clientes**, utilizando arquitetura baseada no padrão **MVC** e persistência de dados em **PostgreSQL**.
+
+O sistema implementa o padrão **CRUD (Create, Read, Update e Delete)** permitindo gerenciar registros de clientes com validação de dados, máscaras de entrada e organização modular do código.
 
 ---
 
-### Sistema de Cadastro de Clientes no Modelo CRUD
+# 📸 Preview da Aplicação
 
-O presente projeto consiste no desenvolvimento de um sistema de cadastro de clientes baseado no modelo CRUD (Create, Read, Update e Delete). O sistema permite a realização das operações de criação, consulta, atualização e exclusão de registros de clientes, além de aplicar validações com o objetivo de garantir a integridade e a consistência das informações armazenadas.
+*(adicione prints ou GIFs aqui depois)*
 
-### Tecnologias Utilizadas
-
-O sistema foi desenvolvido utilizando as seguintes tecnologias:
-
-* Linguagem de programação Java
-* Banco de dados PostgreSQL
-* JDBC (Java Database Connectivity) para acesso ao banco de dados
-* Ambiente de desenvolvimento IntelliJ IDEA
-
-### Bibliotecas Externas
-
-Para a implementação da interface gráfica e a melhoria da usabilidade do sistema, foram utilizadas bibliotecas externas adicionais:
-
-**JCalendar (jcalendar-1.4.jar)**
-A biblioteca JCalendar foi utilizada para o gerenciamento de campos de data na interface gráfica da aplicação, especialmente para o preenchimento da data de nascimento do cliente. Sua utilização contribui para a padronização das datas e reduz erros de entrada por parte do usuário.
-
-**MigLayout (miglayout-3.7.4.jar)**
-A biblioteca MigLayout foi empregada como gerenciador de layout da interface gráfica. Essa biblioteca possibilita uma organização mais flexível e eficiente dos componentes visuais, além de proporcionar melhor legibilidade do código quando comparada a outros gerenciadores de layout tradicionais do Java Swing.
-
-### Execução do Sistema em Ambiente Local
-
-Para que o código-fonte possa ser executado corretamente em ambiente local e o sistema seja iniciado de forma adequada, são necessárias algumas configurações e ajustes, descritos a seguir.
-
-### Gestão de Dependências
-
-É necessária a importação manual dos arquivos `.jar`, adicionando-os ao *classpath* do projeto no IntelliJ IDEA:
-
-* postgresql-42.7.8.jar (driver de conexão com o PostgreSQL)
-* jcalendar-1.4.jar
-* miglayout-3.7.4.jar
-
-### Ajustes de Persistência e Autenticação
-
-Devem ser efetuados ajustes relacionados à persistência de dados e à autenticação no banco de dados, incluindo:
-
-* Atualização das credenciais de acesso na classe `Conexao.java`, de modo a adequá-las às configurações do servidor PostgreSQL local.
-* Validação da conectividade por meio da classe `TesteConexao.java`, a qual retorna uma mensagem de sucesso indicando que a conexão foi estabelecida corretamente.
-
-Esses procedimentos asseguram a correta comunicação entre a aplicação e o banco de dados.
-
-### Estrutura do Banco de Dados
-
-O banco de dados foi modelado utilizando o PostgreSQL, sendo criada a tabela `clientes`, responsável por armazenar as informações cadastrais dos usuários do sistema. A estrutura da tabela é apresentada a seguir:
-
-```sql
-CREATE DATABASE bd_cadastro_cliente
-    WITH
-    OWNER = postgres
-    ENCODING = 'UTF8'
-    LC_COLLATE = 'pt-BR'
-    LC_CTYPE = 'pt-BR'
-    LOCALE_PROVIDER = 'libc'
-    TABLESPACE = pg_default
-    CONNECTION LIMIT = -1
-    IS_TEMPLATE = False;
-
-
-
-CREATE SEQUENCE IF NOT EXISTS public.clientes_id_seq;
-
--- Table: public.clientes
-
--- DROP TABLE IF EXISTS public.clientes;
-
-CREATE TABLE IF NOT EXISTS public.clientes
-(
-    id integer NOT NULL DEFAULT nextval('clientes_id_seq'::regclass),
-    nome character varying(100) COLLATE pg_catalog."default" NOT NULL,
-    cpf character varying(11) COLLATE pg_catalog."default" NOT NULL,
-    data_nascimento date,
-    email character varying(100) COLLATE pg_catalog."default",
-    telefone character varying(20) COLLATE pg_catalog."default",
-    endereco character varying(150) COLLATE pg_catalog."default",
-    bairro character varying(50) COLLATE pg_catalog."default",
-    numero character varying(10) COLLATE pg_catalog."default",
-    cidade character varying(100) COLLATE pg_catalog."default",
-    uf character(2) COLLATE pg_catalog."default",
-    cep character varying(8) COLLATE pg_catalog."default",
-    observacao text COLLATE pg_catalog."default",
-    CONSTRAINT clientes_pkey PRIMARY KEY (id),
-    CONSTRAINT clientes_cpf_key UNIQUE (cpf),
-    CONSTRAINT clientes_email_key UNIQUE (email),
-    CONSTRAINT clientes_uf_check CHECK (char_length(uf) = 2)
-)
-
-TABLESPACE pg_default;
-
-ALTER TABLE IF EXISTS public.clientes
-    OWNER to postgres;
-
-
-ALTER SEQUENCE public.clientes_id_seq 
-OWNED BY public.clientes.id
+```
+docs/imagens/tela-cadastro.png
 ```
 
-A tabela possui como chave primária o campo `id` e uma restrição de unicidade para o campo `cpf`, garantindo que não haja duplicidade de registros para um mesmo cliente.
+Sugestão de estrutura:
+
+```
+docs
+ ├─ imagens
+ │   ├─ tela-cadastro.png
+ │   ├─ tela-edicao.png
+ │   └─ tabela-clientes.png
+```
 
 ---
 
-# Sistema de Cadastro de Clientes
-
-Aplicação desktop desenvolvida em **Java Swing** para gerenciamento de clientes.
-O sistema permite cadastrar, editar, excluir e visualizar clientes com validação de formulário, busca automática de endereço via CEP e suporte a temas visuais.
-
----
-
-# 📋 Funcionalidades
+# 🚀 Funcionalidades
 
 * Cadastro de clientes
-* Edição de clientes
+* Atualização de clientes
 * Exclusão de clientes
 * Listagem de clientes em tabela
-* Validação automática de campos
+* Validação automática de formulário
+* Máscaras para CPF, telefone e CEP
 * Busca automática de endereço via CEP
-* Alternância de tema (claro / escuro)
-* Máscaras de CPF, telefone e CEP
+* Alternância de tema visual (claro / escuro)
+* Componentes personalizados para interface
 
 ---
 
-# 🧠 Arquitetura do Projeto
+# 🧠 Arquitetura do Sistema
 
-O sistema foi desenvolvido utilizando uma arquitetura inspirada no padrão **MVC (Model - View - Controller)**.
+O projeto foi estruturado seguindo o padrão **MVC (Model – View – Controller)** para separar responsabilidades e melhorar a organização do código.
 
 ```
-View
-│
-├── TelaDoCadastro
-│
-Controller
-│
-├── ControleDoCadastro
-├── ControleEstadoTela
-│
-Model
-│
-├── Cliente
-│
-DAO
-│
-├── ClienteDAO
-│
-Validação
-│
-├── ValidadorFormulario
-├── ValidadorCEP
-├── TipoValidacao
-│
-Componentes
-│
-├── CampoDataComCalendario
-├── ComboBoxUF
-│
-Util
-│
-├── Tema
-├── TemaEnum
-├── UF
+                +----------------+
+                |      View      |
+                |  TelaCadastro  |
+                +--------+-------+
+                         |
+                         |
+                +--------v-------+
+                |   Controller   |
+                | ControleCadastro|
+                +--------+-------+
+                         |
+                         |
+                +--------v-------+
+                |      DAO       |
+                |   ClienteDAO   |
+                +--------+-------+
+                         |
+                         |
+                +--------v-------+
+                |    Database    |
+                |   PostgreSQL   |
+                +----------------+
 ```
 
 ---
@@ -204,42 +112,172 @@ src
 
 ---
 
-# 📚 Documentação Completa
-
-A documentação completa do projeto (arquitetura, DAO, controller, validação, CEP, tema e fluxo do sistema) está disponível no arquivo:
-
-➡️ **[Abrir documentação completa](src/document.md)**
-
----
-
 # ⚙️ Tecnologias Utilizadas
 
-* **Java**
-* **Java Swing**
-* **JDBC**
-* **MVC Pattern**
-* **MaskFormatter**
-* **SwingWorker**
+| Tecnologia    | Função                      |
+| ------------- | --------------------------- |
+| Java          | Linguagem principal         |
+| Java Swing    | Interface gráfica           |
+| PostgreSQL    | Banco de dados              |
+| JDBC          | Comunicação com banco       |
+| MVC           | Arquitetura do sistema      |
+| SwingWorker   | Processamento em background |
+| MaskFormatter | Máscaras de entrada         |
 
 ---
 
-# 🚀 Como Executar o Projeto
+# 📚 Bibliotecas Utilizadas
 
-1. Clone o repositório
+### JCalendar
+
+Arquivo:
+
+```
+jcalendar-1.4.jar
+```
+
+Utilizado para manipulação de **datas com componente de calendário** na interface gráfica.
+
+---
+
+### MigLayout
+
+Arquivo:
+
+```
+miglayout-3.7.4.jar
+```
+
+Gerenciador de layout que permite organizar componentes da interface de forma flexível e eficiente.
+
+---
+
+# 🗄 Banco de Dados
+
+Banco utilizado:
+
+**PostgreSQL**
+
+Nome do banco:
+
+```
+bd_cadastro_cliente
+```
+
+Tabela principal:
+
+```
+clientes
+```
+
+A tabela armazena os dados cadastrais dos clientes.
+
+---
+
+## Criação do Banco
+
+```sql
+CREATE DATABASE bd_cadastro_cliente
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'pt-BR'
+    LC_CTYPE = 'pt-BR'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+```
+
+---
+
+## Criação da Sequence
+
+```sql
+CREATE SEQUENCE IF NOT EXISTS public.clientes_id_seq;
+```
+
+---
+
+## Criação da Tabela
+
+```sql
+CREATE TABLE IF NOT EXISTS public.clientes
+(
+    id integer NOT NULL DEFAULT nextval('clientes_id_seq'::regclass),
+    nome character varying(100) NOT NULL,
+    cpf character varying(11) NOT NULL,
+    data_nascimento date,
+    email character varying(100),
+    telefone character varying(20),
+    endereco character varying(150),
+    bairro character varying(50),
+    numero character varying(10),
+    cidade character varying(100),
+    uf character(2),
+    cep character varying(8),
+    observacao text,
+    CONSTRAINT clientes_pkey PRIMARY KEY (id),
+    CONSTRAINT clientes_cpf_key UNIQUE (cpf),
+    CONSTRAINT clientes_email_key UNIQUE (email),
+    CONSTRAINT clientes_uf_check CHECK (char_length(uf) = 2)
+);
+```
+
+---
+
+# ▶️ Como Executar o Projeto
+
+### 1️⃣ Clonar o repositório
 
 ```
 git clone https://github.com/seu-usuario/seu-repositorio.git
 ```
 
-2. Abra o projeto em uma IDE Java
+---
 
-Exemplos:
+### 2️⃣ Adicionar dependências
 
-* IntelliJ IDEA
-* NetBeans
-* Eclipse
+Adicione manualmente ao projeto:
 
-3. Execute a classe principal
+```
+postgresql-42.7.8.jar
+jcalendar-1.4.jar
+miglayout-3.7.4.jar
+```
+
+---
+
+### 3️⃣ Configurar conexão
+
+Editar a classe:
+
+```
+Conexao.java
+```
+
+Definindo:
+
+* usuário
+* senha
+* porta
+* nome do banco
+
+---
+
+### 4️⃣ Testar conexão
+
+Execute:
+
+```
+TesteConexao.java
+```
+
+---
+
+### 5️⃣ Executar o sistema
+
+Rodar a classe principal:
 
 ```
 TelaDoCadastro.java
@@ -247,29 +285,44 @@ TelaDoCadastro.java
 
 ---
 
-# 🖼 Interface do Sistema
+# 📖 Documentação Completa
 
-*(Você pode adicionar prints aqui depois)*
+A documentação técnica completa do projeto está disponível em:
 
 ```
-docs/imagens/tela-cadastro.png
+src/document.md
 ```
+
+Contendo explicações detalhadas sobre:
+
+* DAO
+* Controllers
+* Sistema de validação
+* Busca de CEP
+* Sistema de temas
+* Estrutura do projeto
 
 ---
 
 # 🔮 Melhorias Futuras
 
-* Pesquisa de clientes
+* Pesquisa avançada de clientes
 * Paginação da tabela
 * Exportação para Excel
 * Exportação para PDF
 * Sistema de login
-* Histórico de alterações
-* Versão Web com API REST
+* Controle de permissões
+* API REST
+* Versão Web
 
 ---
 
 # 👨‍💻 Autor
 
-Projeto desenvolvido para estudo de **Java, Swing e arquitetura MVC**.
+Projeto desenvolvido para estudo de:
 
+* **Java**
+* **Java Swing**
+* **Arquitetura MVC**
+* **Integração com PostgreSQL**
+* **Boas práticas de desenvolvimento**
