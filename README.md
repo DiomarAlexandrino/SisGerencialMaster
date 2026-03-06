@@ -68,27 +68,36 @@ CREATE DATABASE bd_cadastro_cliente
 
 CREATE SEQUENCE IF NOT EXISTS public.clientes_id_seq;
 
+-- Table: public.clientes
+
+-- DROP TABLE IF EXISTS public.clientes;
+
 CREATE TABLE IF NOT EXISTS public.clientes
 (
-    id integer NOT NULL DEFAULT nextval('public.clientes_id_seq'),
-    nome varchar(100) NOT NULL,
-    idade integer CHECK (idade >= 0),
-    cpf varchar(11) NOT NULL,
+    id integer NOT NULL DEFAULT nextval('clientes_id_seq'::regclass),
+    nome character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    cpf character varying(11) COLLATE pg_catalog."default" NOT NULL,
     data_nascimento date,
-    email varchar(100),
-    telefone varchar(20),
-    endereco varchar(150),
-    numero varchar(10),
-    cidade varchar(100),
-    uf char(2),
-    cep varchar(8),
-    observacao text,
-    
+    email character varying(100) COLLATE pg_catalog."default",
+    telefone character varying(20) COLLATE pg_catalog."default",
+    endereco character varying(150) COLLATE pg_catalog."default",
+    bairro character varying(50) COLLATE pg_catalog."default",
+    numero character varying(10) COLLATE pg_catalog."default",
+    cidade character varying(100) COLLATE pg_catalog."default",
+    uf character(2) COLLATE pg_catalog."default",
+    cep character varying(8) COLLATE pg_catalog."default",
+    observacao text COLLATE pg_catalog."default",
     CONSTRAINT clientes_pkey PRIMARY KEY (id),
     CONSTRAINT clientes_cpf_key UNIQUE (cpf),
     CONSTRAINT clientes_email_key UNIQUE (email),
     CONSTRAINT clientes_uf_check CHECK (char_length(uf) = 2)
-);
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.clientes
+    OWNER to postgres;
+
 
 ALTER SEQUENCE public.clientes_id_seq 
 OWNED BY public.clientes.id
